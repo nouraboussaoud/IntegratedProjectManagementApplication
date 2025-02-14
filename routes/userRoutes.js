@@ -3,23 +3,36 @@ const {
   registerUser,
   loginUser,
   logoutUser,
-  deleteUser,
   updateUser,
+  deleteUser,
   toggleUserStatus,
+  verifyToken,
+  getUserById,
+  updatePassword,
+  verifyEmail,
+  forgotPassword,
+  banUser,
+  unbanUser,
 } = require("../controllers/userController");
-const { protect } = require("../middleware/authMiddleware");
-const { isAdmin } = require("../middleware/roleMiddleware"); // Import the isAdmin middleware
 
+const { isAdmin } = require("../middleware/roleMiddleware");
+const {upload} = require("../middleware/uploadimage");
 const router = express.Router();
 
-// Routes for User Authentication & Management
-router.post("/register", registerUser); // Sign up
-router.post("/login", loginUser); // Sign in
-router.post("/logout", protect, logoutUser); // Sign out (protected route)
+// Protect the routes with verifyToken middleware
+router.post('/register', upload.single('profilePic'), registerUser); // 'profilePic' should match the name in your frontend form
+router.post('/login',loginUser); // Login doesn't require token
+router.post('/logout', verifyToken, logoutUser); // Logout requires token
 
-router.put("/update/:id", protect, updateUser); // Modify account (protected route)
-
-router.delete("/delete/:id", protect, isAdmin, deleteUser); // Only admins can delete users (protected route)
-router.put("/toggle-status/:id", protect, isAdmin, toggleUserStatus); // Only admins can activate/deactivate users (protected route)
+// Protected routes with verifyToken middleware
+router.put('/update/:id', verifyToken, updateUser); // Update user requires token
+router.delete('/delete/:id', verifyToken, isAdmin, deleteUser); // Delete user requires token
+router.put('/toggle-status/:id', verifyToken, isAdmin , toggleUserStatus); // Toggle status requires token
+router.get('/:id', verifyToken, getUserById); // Get user by ID requires token
+router.put('/update-password/:id', verifyToken, updatePassword); // Update password requires token
+router.get('/verify-email/:verificationToken', verifyEmail);
+router.post('/forgot-password', forgotPassword); // Forgot password doesn't require token
+router.put('/ban-user/:id', verifyToken, isAdmin,banUser); // Ban user requires token
+router.put('/unban-user/:id', verifyToken, isAdmin , unbanUser); // Unban user requires token
 
 module.exports = router;
