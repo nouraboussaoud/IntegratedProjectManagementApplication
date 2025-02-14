@@ -13,17 +13,33 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        
     },
     role: {
         type: String,
         enum: ["admin", "tutor", "student"],
         default: "student"
     },
+    isAdmin: {
+        type: Boolean,
+        default: false,
+      },
     isActive: {
         type: Boolean,
-        default: true
-    }
+        default: false
+    },
+    verificationToken: 
+        {type:String},
+      isBanned: {
+        type:Boolean,
+        default:false
+      },
+      profilePic: {
+        type: String
+      },
+      provider:{
+        type: String
+      }
 }, { timestamps: true });
 
 // Hash password before saving
