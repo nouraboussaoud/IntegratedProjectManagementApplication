@@ -11,8 +11,8 @@ const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'nour.aboussaoud@esprit.tn', // Update with your email
-        pass: '222JFT4302' // Update with your email password (use environment variables for security in production)
+        user: 'aboussaoudnour436@gmail.com', // Update with your email
+        pass: 'edeuouehncqbnawp' // Update with your email password (use environment variables for security in production)
     }
 });
 
@@ -77,42 +77,42 @@ console.log('Hashed Password:', hashedPassword); // Log the hashed password
   };
   //////////login
   const loginUser = async (req, res) => {
-
     try {
-        const user = await User.findOne({email : req.body.email });
-        console.log('User found:', user); // Debugging log
-
-        const isMatch = bcrypt.compare(req.body.password, user.password);
-
-        console.log('Hashed password in DB:', user.password); // Log the hashed password from DB
-
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid email or password" });
-        }
-
-        if (!user.isActive) {
-            return res.status(401).json({ message: 'Please verify your email to activate your account' });
-        }
-
-        if (user.isBanned) {
-            return res.status(401).json({ message: 'Your account is banned' });
-        }
-
-        const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
-
-        res.json({ token });
+      const user = await User.findOne({ email: req.body.email });
+      console.log('User found:', user); // Debugging log
+  
+      const isMatch = bcrypt.compare(req.body.password, user.password);
+  
+      console.log('Hashed password in DB:', user.password); // Log the hashed password from DB
+  
+      if (!isMatch) {
+        return res.status(400).json({ message: "Invalid email or password" });
+      }
+  
+      if (!user.isActive) {
+        return res.status(401).json({ message: 'Please verify your email to activate your account' });
+      }
+  
+      if (user.isBanned) {
+        return res.status(401).json({ message: 'Your account is banned' });
+      }
+  
+      const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, { expiresIn: '1h' });
+  
+      res.json({ token, user });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
-};
+  };
+  
 
 
 
 // Logout (Sign Out)
 const logoutUser = (req, res) => {
     res.status(200).json({ message: "Logout successful" });
-};
+    user};
 
 // Verify Token
 const verifyToken = (req, res, next) => {
