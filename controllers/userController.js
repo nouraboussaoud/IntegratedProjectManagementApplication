@@ -16,7 +16,15 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({});
+        res.json(users);
+      } catch (err) {
+        console.error('Error fetching users', err);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    };
 
   
   // Register (Sign Up) with file upload
@@ -36,9 +44,9 @@ const transporter = nodemailer.createTransport({
               return res.status(400).json({ message: "User already exists" });
           }
   // Hash the password during registration
-const saltRounds = 10; 
-const hashedPassword = await bcrypt.hash(password, saltRounds);
-console.log('Hashed Password:', hashedPassword);  // Verify the output here
+        const saltRounds = 10; 
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        console.log('Hashed Password:', hashedPassword);  // Verify the output here
 
 
   
@@ -55,11 +63,11 @@ console.log('Hashed Password:', hashedPassword);  // Verify the output here
           // Save the user to the database
           await user.save();
           console.log('Password:', password); // Log the plain password
-console.log('Hashed Password:', hashedPassword); // Log the hashed password
+            console.log('Hashed Password:', hashedPassword); // Log the hashed password
   
           // Send a verification email
           const mailOptions = {
-              from: 'nour.aboussaoud@esprit.tn', // Update to your email
+              from: 'aboussaoudnour436@gmail.com', // Update to your email
               to: user.email,
               subject: 'Verify your email address',
               text: `Please click on this link to verify your email address: http://localhost:5000/api/users/verify-email/${user.verificationToken}`,
@@ -100,6 +108,7 @@ console.log('Hashed Password:', hashedPassword); // Log the hashed password
       const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, { expiresIn: '1h' });
   
       res.json({ token, user });
+      console.log('Token:', token); // Debugging log
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ message: 'Server error', error: error.message });
@@ -112,11 +121,13 @@ console.log('Hashed Password:', hashedPassword); // Log the hashed password
 // Logout (Sign Out)
 const logoutUser = (req, res) => {
     res.status(200).json({ message: "Logout successful" });
-    user};
+    console.log("Logout successful");
+}
 
 // Verify Token
 const verifyToken = (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
+    console.log('Received Token:', token);  // Debugging log
 
     if (!token) {
         return res.status(401).json({ message: 'Token missing' });
@@ -127,6 +138,8 @@ const verifyToken = (req, res, next) => {
         req.userId = decoded.userId;
         next();
     } catch (err) {
+        console.error('Token verification failed:', err);  // Detailed error logging
+
         res.status(401).json({ message: 'Invalid token' });
     }
 };
@@ -250,7 +263,7 @@ const forgotPassword = async (req, res) => {
         await user.save();
 
         const mailOptions = {
-            from: 'nour.aboussaoud@esprit.tn',
+            from: 'aboussaoudnour436@gmail.com',
             to: email,
             subject: 'Your New Password',
             text: `Dear user, after your request to recover the password, your new one will be: ${newPassword}`,
@@ -285,7 +298,7 @@ const banUser = async (req, res) => {
         await user.save();
 
         const mailOptions = {
-            from: 'nour.aboussaoud@esprit.tn',
+            from: 'aboussaoudnour436@gmail.com',
             to: user.email,
             subject: 'Your account has been banned',
             text: 'Your account has been banned. For more information, please contact us.',
@@ -313,7 +326,7 @@ const unbanUser = async (req, res) => {
         await user.save();
 
         const mailOptions = {
-            from: 'nour.aboussaoud@esprit.tn',
+            from: 'aboussaoudnour436@gmail.com',
             to: user.email,
             subject: 'Your account has been unbanned',
             text: 'Your account has been unbanned.',
@@ -341,4 +354,5 @@ module.exports = {
     forgotPassword,
     banUser,
     unbanUser,
+    getAllUsers
 };
