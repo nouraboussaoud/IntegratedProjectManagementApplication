@@ -2,13 +2,16 @@ const User = require('../models/User');
 
 const isAdmin = async (req, res, next) => {
   try {
-    // Ensure the user is authenticated
+    // Log for debugging
+    console.log('Authenticating user:', req.user);
+
+    // Ensure the user is authenticated (req.user should be set by the token verification middleware)
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: 'No user authenticated' });
     }
 
     // Find the user by their ID
-    const user = await User.findById(req.user.id);
+    const user = User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -21,7 +24,7 @@ const isAdmin = async (req, res, next) => {
     // Proceed to the next middleware/route handler
     next();
   } catch (error) {
-    console.error(error);
+    console.error('Error in isAdmin middleware:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 };
