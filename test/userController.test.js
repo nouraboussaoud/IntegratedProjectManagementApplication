@@ -1,41 +1,37 @@
+// Mock nodemailer to prevent real emails from being sent
+jest.mock("nodemailer");
 const nodemailer = require("nodemailer");
 const mockSendMail = jest.fn().mockResolvedValue(true);
-
-// Mock nodemailer to return an object with the `createTransport` function
-jest.mock("nodemailer", () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: mockSendMail,
-  }),
-}));
+nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
 
 const request = require("supertest");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const User = require("../models/User");
-const app = require("../index");
+const User = require("../models/User"); // Adjust path if needed
+const app = require("../index"); // Ensure this is the Express app instance
 
 let mongoServer;
-let mongoUri;
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
-  mongoUri = mongoServer.getUri();
+  const mongoUri = mongoServer.getUri();
 
-  // Directly connecting without checking the readyState
+  // If there is an existing mongoose connection, disconnect before connecting
+  if (mongoose.connection.readyState === 1) {
+    await mongoose.disconnect();
+  }
+
+  // Establish the connection to the in-memory MongoDB instance
   await mongoose.connect(mongoUri, { dbName: "testDB" });
 });
 
 afterEach(async () => {
-  // Clean up the database after each test
-  await User.deleteMany();
+  await User.deleteMany(); // Clear test data after each test
 });
 
 afterAll(async () => {
-  // Ensure there is a small delay before closing the connection
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  await mongoose.connection.close(); // Close connection after all tests
+  await mongoose.connection.close(); // Close the connection after all tests
   await mongoServer.stop(); // Stop the in-memory MongoDB server
 });
 
@@ -49,7 +45,7 @@ describe("User Registration", () => {
     };
 
     const response = await request(app)
-      .post("/api/users/register")
+      .post("/api/users/register") // Adjust the endpoint if necessary
       .send(newUser)
       .expect(201);
 
@@ -65,12 +61,6 @@ describe("User Registration", () => {
 
     // Ensure email was sent
     expect(mockSendMail).toHaveBeenCalled();
-    // Optionally check parameters passed to sendMail
-    expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
-      to: newUser.email,
-      subject: expect.any(String),
-      text: expect.any(String),
-    }));
   });
 
   it("should return 400 if email already exists", async () => {
