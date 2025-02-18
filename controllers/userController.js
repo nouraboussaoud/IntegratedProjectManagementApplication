@@ -86,34 +86,62 @@ const getAllUsers = async (req, res) => {
   //////////login
   const loginUser = async (req, res) => {
     try {
-      const user = await User.findOne({ email: req.body.email });
-      console.log('User found:', user); // Debugging log
-  
-      const isMatch = bcrypt.compare(req.body.password, user.password);
-  
-      console.log('Hashed password in DB:', user.password); // Log the hashed password from DB
-  
-      if (!isMatch) {
-        return res.status(400).json({ message: "Invalid email or password" });
-      }
-  
-      if (!user.isActive) {
-        return res.status(401).json({ message: 'Please verify your email to activate your account' });
-      }
-  
-      if (user.isBanned) {
-        return res.status(401).json({ message: 'Your account is banned' });
-      }
-  
-      const token = jwt.sign({ userId: user._id, role: user.role }, secretKey, { expiresIn: '1h' });
-  
-      res.json({ token, user });
-      console.log('Token:', token); // Debugging log
+        // Find the user
+        const user = await User.findOne({ email: req.body.email });
+        
+        // If no user found, return early
+        if (!user) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
+
+        console.log('User found:', user); // Debugging log
+
+        // Compare passwords - make sure to await the comparison
+        const isMatch = await bcrypt.compare(req.body.password, user.password);
+        
+        console.log('Password match:', isMatch); // Debugging log
+
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
+
+        if (!user.isActive) {
+            return res.status(401).json({ message: 'Please verify your email to activate your account' });
+        }
+
+        if (user.isBanned) {
+            return res.status(401).json({ message: 'Your account is banned' });
+        }
+
+        // Generate token
+        const token = jwt.sign(
+            { userId: user._id, role: user.role }, 
+            secretKey, 
+            { expiresIn: '1h' }
+        );
+
+        console.log('Token generated successfully'); // Debugging log
+
+        // Send single response with all necessary data
+        return res.status(200).json({
+            message: 'Login successful',
+            token,
+            user: {
+                _id: user._id,
+                email: user.email,
+                role: user.role,
+                name: user.name
+            }
+        });
+
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('Login error:', error);
+        return res.status(500).json({ 
+            message: 'Server error', 
+            error: error.message 
+        });
     }
-  };
+};
   
 
 
@@ -285,61 +313,52 @@ const forgotPassword = async (req, res) => {
 };
 
 // Ban User
-const banUser = async (req, res) => {
+const toggleBanStatus = async (req, res) => {
     const userId = req.params.id;
+    const { action } = req.body; // Expecting "ban" or "unban" in the request body
 
     try {
+        // Find the user by ID
         const user = await User.findOne({ _id: userId });
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-        if (user.isBanned) return res.status(400).json({ message: 'User is already banned' });
+        // Determine the action and validate the current status
+        if (action === "ban") {
+            if (user.isBanned) {
+                return res.status(400).json({ message: 'User is already banned' });
+            }
+            user.isBanned = true;
+        } else if (action === "unban") {
+            if (!user.isBanned) {
+                return res.status(400).json({ message: 'User is not banned' });
+            }
+            user.isBanned = false;
+        } else {
+            return res.status(400).json({ message: 'Invalid action. Use "ban" or "unban".' });
+        }
 
-        user.isBanned = true;
+        // Save the updated user
         await user.save();
 
+        // Send an email notification
         const mailOptions = {
-            from: 'aboussaoudnour436@gmail.com',
+            from: 'aboussaoudnour436@gmail.com', // Replace with your email
             to: user.email,
-            subject: 'Your account has been banned',
-            text: 'Your account has been banned. For more information, please contact us.',
+            subject: `Your account has been ${action === "ban" ? "banned" : "unbanned"}`,
+            text: `Your account has been ${action === "ban" ? "banned. For more information, please contact us." : "unbanned."}`,
         };
 
         await transporter.sendMail(mailOptions);
-        res.json({ message: 'User banned successfully' });
+
+        // Respond with success
+        res.json({ message: `User ${action === "ban" ? "banned" : "unbanned"} successfully` });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
-
-// Unban User
-const unbanUser = async (req, res) => {
-    const userId = req.params.id;
-
-    try {
-        const user = await User.findOne({ _id: userId });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        if (!user.isBanned) return res.status(400).json({ message: 'User is not banned' });
-
-        user.isBanned = false;
-        await user.save();
-
-        const mailOptions = {
-            from: 'aboussaoudnour436@gmail.com',
-            to: user.email,
-            subject: 'Your account has been unbanned',
-            text: 'Your account has been unbanned.',
-        };
-
-        await transporter.sendMail(mailOptions);
-        res.json({ message: 'User unbanned successfully' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
 module.exports = {
     registerUser,
     loginUser,
@@ -352,7 +371,6 @@ module.exports = {
     updatePassword,
     verifyEmail,
     forgotPassword,
-    banUser,
-    unbanUser,
+    toggleBanStatus,
     getAllUsers
 };
