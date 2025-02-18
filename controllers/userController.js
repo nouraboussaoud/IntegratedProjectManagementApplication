@@ -84,7 +84,7 @@ const getAllUsers = async (req, res) => {
     }
   };
   //////////login
-  const loginUser = async (req, res) => {
+  const loginUser = async (req, res) => { 
     try {
         // Find the user
         const user = await User.findOne({ email: req.body.email });
@@ -96,7 +96,7 @@ const getAllUsers = async (req, res) => {
 
         console.log('User found:', user); // Debugging log
 
-        // Compare passwords - make sure to await the comparison
+        // Compare passwords 
         const isMatch = await bcrypt.compare(req.body.password, user.password);
         
         console.log('Password match:', isMatch); // Debugging log
@@ -130,7 +130,8 @@ const getAllUsers = async (req, res) => {
                 _id: user._id,
                 email: user.email,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                profilePic: user.profilePic
             }
         });
 
