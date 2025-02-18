@@ -34,6 +34,7 @@ afterEach(async () => {
 afterAll(async () => {
   await mongoose.connection.close(); // Close the connection after all tests
   await mongoServer.stop(); // Stop the in-memory MongoDB server
+
 });
 
 describe("User Registration", () => {
