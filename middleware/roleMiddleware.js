@@ -2,30 +2,30 @@ const User = require('../models/User');
 
 const isAdmin = async (req, res, next) => {
   try {
-    // Log for debugging
-    console.log('Authenticating user:', req.user);
+      console.log('Authenticating user:', req.user);  // Debugging log
 
-    // Ensure the user is authenticated (req.user should be set by the token verification middleware)
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: 'No user authenticated' });
-    }
+      if (!req.user || !req.user.id) {
+          console.log('No user authenticated');  // Debugging log
+          return res.status(401).json({ message: 'No user authenticated' });
+      }
 
-    // Find the user by their ID
-    const user = User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+      const user = await User.findById(req.user.id);
+      console.log('Found user:', user);  // Debugging log
 
-    // Check if the user has the 'admin' role
-    if (user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admins only.' });
-    }
+      if (!user) {
+          console.log('User not found');  // Debugging log
+          return res.status(404).json({ message: 'User not found' });
+      }
 
-    // Proceed to the next middleware/route handler
-    next();
+      if (user.role !== 'admin') {
+          console.log('Access denied. Admins only.');  // Debugging log
+          return res.status(403).json({ message: 'Access denied. Admins only.' });
+      }
+
+      next();
   } catch (error) {
-    console.error('Error in isAdmin middleware:', error);
-    return res.status(500).json({ message: 'Server error' });
+      console.error('Error in isAdmin middleware:', error);  // Detailed error logging
+      return res.status(500).json({ message: 'Server error' });
   }
 };
 
