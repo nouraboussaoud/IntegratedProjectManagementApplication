@@ -1,26 +1,32 @@
-pipeline{
-agent any
-stages {
-stage('Install dependencies') {
-steps{
-script {
-sh('npm install')
-}
-}
-}
-stage('Unit Test') {
-steps{
-    script {
-sh('npm test')
-}
-}
-}
-stage('Build application') {
-steps{
-script {
-sh('npm run dev')
-}
-}
-}
-}
+pipeline {
+    agent any
+    stages {
+        stage('Install dependencies') {
+            steps {
+                script {
+                    // Install npm dependencies
+                    sh 'npm install'
+                    
+                    // Set execute permissions on node_modules/.bin
+                    sh 'chmod -R +x ./node_modules/.bin'
+                }
+            }
+        }
+        stage('Unit Test') {
+            steps {
+                script {
+                    // Run the tests using npm
+                    sh 'npm test'
+                }
+            }
+        }
+        stage('Build application') {
+            steps {
+                script {
+                    // Run the dev script
+                    sh 'npm run dev'
+                }
+            }
+        }
+    }
 }
