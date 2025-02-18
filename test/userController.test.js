@@ -27,10 +27,8 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-    if (mongoose.connection.readyState === 1) {
-        await mongoose.connection.db.dropDatabase(); // Optionally drop the database instead of deleting individual documents
-      }
-  await User.deleteMany(); // Clear test data after each test
+  // Clear test data after each test
+  await User.deleteMany(); 
 });
 
 afterAll(async () => {
