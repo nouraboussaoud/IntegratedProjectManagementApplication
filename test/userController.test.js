@@ -1,7 +1,11 @@
 const nodemailer = require("nodemailer");
 const mockSendMail = jest.fn().mockResolvedValue(true);
+
+// Mock nodemailer to return an object with the `createTransport` function
 jest.mock("nodemailer", () => ({
-  createTransport: jest.fn().mockReturnValue({ sendMail: mockSendMail }),
+  createTransport: jest.fn().mockReturnValue({
+    sendMail: mockSendMail,
+  }),
 }));
 
 const request = require("supertest");
