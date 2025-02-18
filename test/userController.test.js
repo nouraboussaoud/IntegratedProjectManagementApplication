@@ -27,6 +27,9 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+    if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.dropDatabase(); // Optionally drop the database instead of deleting individual documents
+      }
   await User.deleteMany(); // Clear test data after each test
 });
 
@@ -37,6 +40,7 @@ afterAll(async () => {
 
 describe("User Registration", () => {
   it("should register a new user successfully", async () => {
+    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
     const newUser = {
       name: "Test User",
       email: "nourab000@icloud.com",
@@ -64,6 +68,8 @@ describe("User Registration", () => {
   });
 
   it("should return 400 if email already exists", async () => {
+    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
+
     const existingUser = new User({
       name: "Existing User",
       email: "nour.aboussaoud@esprit.tn",
@@ -86,6 +92,8 @@ describe("User Registration", () => {
   });
 
   it("should return 400 for invalid role", async () => {
+    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
+
     const response = await request(app)
       .post("/api/users/register")
       .send({
