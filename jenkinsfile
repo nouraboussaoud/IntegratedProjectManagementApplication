@@ -1,36 +1,26 @@
-pipeline {
-    agent any
-    stages {
-       stage('Install dependencies') {
-    steps {
-        script {
-            // Remove node_modules and package-lock.json to ensure a clean install
-            sh 'rm -rf node_modules package-lock.json'
-            
-            // Install npm dependencies, forcing bcrypt to build from source
-            sh 'npm install --build-from-source'
-            
-            // Set execute permissions on node_modules/.bin
-            sh 'chmod -R +x ./node_modules/.bin'
-        }
-    }
+pipeline{
+agent any
+stages {
+stage('Install dependencies') {
+steps{
+script {
+sh('npm install')
 }
-
-        stage('Unit Test') {
-            steps {
-                script {
-                    // Run the tests using npm
-                    sh 'npm test'
-                }
-            }
-        }
-        stage('Build application') {
-            steps {
-                script {
-                    // Run the dev script
-                    sh 'npm run dev'
-                }
-            }
-        }
-    }
+}
+}
+stage('Unit Test') {
+steps{
+    script {
+sh('npm test')
+}
+}
+}
+stage('Build application') {
+steps{
+script {
+sh('npm run dev')
+}
+}
+}
+}
 }
