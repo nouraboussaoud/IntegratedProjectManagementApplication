@@ -17,10 +17,15 @@ beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
 
   // If there is an existing mongoose connection, disconnect before connecting
-  
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
   }
 
   // Establish the connection to the in-memory MongoDB instance
+  await mongoose.connect(mongoServer.getUri(), {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 });
 
 afterEach(async () => {
