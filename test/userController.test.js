@@ -15,15 +15,12 @@ let mongoServer;
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
 
   // If there is an existing mongoose connection, disconnect before connecting
-  if (mongoose.connection.readyState === 1) {
-    await mongoose.disconnect();
+  
   }
 
   // Establish the connection to the in-memory MongoDB instance
-  await mongoose.connect(mongoUri, { dbName: "testDB" });
 });
 
 afterEach(async () => {
@@ -33,7 +30,6 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.connection.close(); // Close the connection after all tests
-  await mongoServer.stop(); // Stop the in-memory MongoDB server
 
 });
 
