@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const UserSchema = new mongoose.Schema({
+  googleId: { type: String, required: true, unique: true },
     name: {
         type: String,
         required: true
@@ -13,6 +14,7 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
+        required: false, // Rendre le champ optionnel
         
     },
     role: {
@@ -29,8 +31,8 @@ const UserSchema = new mongoose.Schema({
         default: false
     },
     verificationToken: 
-        {type:String},
-      isBanned: {
+        {type:String ,},
+    isBanned: {
         type:Boolean,
         default:false
       },
@@ -39,7 +41,8 @@ const UserSchema = new mongoose.Schema({
       },
       provider:{
         type: String
-      }
+      },
+       
 }, { timestamps: true });
 
 
