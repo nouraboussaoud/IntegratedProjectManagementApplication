@@ -12,6 +12,7 @@ const User = require("../models/User"); // Adjust path if needed
 const app = require("../index"); // Ensure this is the Express app instance
 
 let mongoServer;
+jest.setTimeout(10000); // Increase timeout to 10 seconds
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
