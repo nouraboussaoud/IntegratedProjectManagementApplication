@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const mongoose = require('mongoose');
+
 const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
 
 // Setup mail transporter
@@ -86,6 +87,7 @@ const getAllUsers = async (req, res) => {
   //////////login
   const loginUser = async (req, res) => {
     try {
+        console.log("Données reçues :", req.body);
         // Find the user
         const user = await User.findOne({ email: req.body.email });
         
