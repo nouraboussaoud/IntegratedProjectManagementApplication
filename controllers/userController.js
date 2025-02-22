@@ -5,6 +5,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const mongoose = require('mongoose');
+const axios = require('axios');
+
+const GITHUB_CLIENT_ID = 'Ov23liDt1cBCD2aFlRUl';
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_SECRET_KEY || 'your_secret_key_here';
 const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
 
 // Setup mail transporter
@@ -360,6 +364,78 @@ const toggleBanStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+
+/*const githubAuth = async (req, res) => {
+    const { code } = req.body;
+
+    try {
+        // Exchange the authorization code for an access token
+        const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
+            client_id: GITHUB_CLIENT_ID,
+            client_secret: GITHUB_CLIENT_SECRET,
+            code,
+        }, {
+            headers: {
+                accept: 'application/json',
+            },
+        });
+
+        const accessToken = tokenResponse.data.access_token;
+
+        // Use the access token to fetch the user's GitHub profile
+        const userResponse = await axios.get('https://api.github.com/user', {
+            headers: {
+                Authorization: `token ${accessToken}`,
+            },
+        });
+
+        const { login, email, name, avatar_url } = userResponse.data;
+
+        // Check if the user already exists in the database
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            // If the user doesn't exist, create a new user
+            user = new User({
+                name: name || login,
+                email,
+                password: '', // No password for GitHub OAuth users
+                role: 'student', // Default role, adjust as needed
+                profilePic: avatar_url,
+                isActive: true,
+            });
+
+            await user.save();
+        }
+
+        // Generate a JWT token
+        const token = jwt.sign(
+            { userId: user._id, role: user.role },
+            secretKey,
+            { expiresIn: '1h' }
+        );
+
+        // Respond with the JWT token and user data
+        res.json({
+            jwtToken: token,
+            user: {
+                _id: user._id,
+                email: user.email,
+                role: user.role,
+                name: user.name,
+                profilePic: user.profilePic,
+            },
+        });
+    } catch (error) {
+        console.error('GitHub OAuth error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+*/
+
+
+        
 module.exports = {
     registerUser,
     loginUser,
@@ -373,5 +449,6 @@ module.exports = {
     verifyEmail,
     forgotPassword,
     toggleBanStatus,
-    getAllUsers
+    getAllUsers,
+    //githubAuth
 };

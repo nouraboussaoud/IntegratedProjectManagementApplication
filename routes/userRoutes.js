@@ -14,7 +14,8 @@ const {
   banUser,
   unbanUser,
   getAllUsers,
-  toggleBanStatus
+  toggleBanStatus,
+  githubAuth
 } = require("../controllers/userController");
 
 const { isAdmin } = require("../middleware/roleMiddleware");
@@ -36,5 +37,7 @@ router.put('/update-password/:id', verifyToken, updatePassword); // Update passw
 router.get('/verify-email/:verificationToken', verifyEmail); //🚀
 router.post('/forgot-password', forgotPassword); // Forgot password doesn't require token done with front 🚀
 router.put('/ban-user/:id', verifyToken,toggleBanStatus); // Ban user requires token 🚀
+router.
+//router.post('/auth/github',githubAuth);
 
 module.exports = router;

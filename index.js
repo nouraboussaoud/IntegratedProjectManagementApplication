@@ -2,8 +2,17 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const userRoutes = require("./routes/userRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const groupRoutes = require("./routes/groupRoutes");
 const cors = require("cors");
 dotenv.config();
+const { default: axios } = require("axios");
+const path = require("path");
+const client_id=process.env.GITHUB_CLIENT_ID;
+const client_secret=process.env.GITHUB_CLIENT_SECRET;
+
+
 
 const app = express();
 
@@ -25,4 +34,15 @@ if (process.env.NODE_ENV !== "test") {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));  // Start the server only if not in test mode
 }
+
+// Group Routes
+app.use("/api/groups", groupRoutes);
+
+// Project Routes
+app.use("/api/projects", projectRoutes);
+
+// Task Routes
+app.use("/api/tasks", taskRoutes);
+
+
 module.exports = app;
