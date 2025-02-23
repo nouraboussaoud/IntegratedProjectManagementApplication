@@ -34,6 +34,7 @@ const UserSchema = new mongoose.Schema({
         type:Boolean,
         default:false
       },
+      githubId: { type: String, unique: true, sparse: true },
       profilePic: {
         type: String
       },
