@@ -24,8 +24,8 @@ beforeAll(async () => {
 
   // Establish the connection to the in-memory MongoDB instance
   await mongoose.connect(mongoServer.getUri(), {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    useNewUrlParser: true,//for deprecation warnings
+    useUnifiedTopology: true, //for deprecation warnings
   });
 });
 
