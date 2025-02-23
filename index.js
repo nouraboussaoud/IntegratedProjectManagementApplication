@@ -9,8 +9,7 @@ const cors = require("cors");
 dotenv.config();
 const { default: axios } = require("axios");
 const path = require("path");
-const client_id=process.env.GITHUB_CLIENT_ID;
-const client_secret=process.env.GITHUB_CLIENT_SECRET;
+
 
 
 
@@ -27,6 +26,11 @@ app.use(express.json());  // Middleware to parse JSON
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDB Connected..."))
     .catch(err => console.error(err));
+
+    console.log("userRoutes type:", typeof userRoutes);
+    console.log("projectRoutes type:", typeof projectRoutes);
+    console.log("taskRoutes type:", typeof taskRoutes);
+    console.log("groupRoutes type:", typeof groupRoutes);
 
 // User Routes
 app.use("/api/users", userRoutes);
