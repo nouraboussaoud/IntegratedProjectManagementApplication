@@ -1,6 +1,5 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const router = express.Router();
 const {
     getAllProjects,
     getProjectById,
@@ -16,6 +15,7 @@ const {
     addTask,
     assignProjectToGroup,
 } = require("../controllers/projectController");
+const router = express.Router();
 
 router.get("/getAllProjects", getAllProjects);
 router.get("/getProjectById/:id", getProjectById);
@@ -30,3 +30,5 @@ router.put("/updateProject/:id", updateProject);
 router.delete("/deleteProject/:id", deleteProject);
 router.put("/addTask/:id", addTask);
 router.put("/assignProjectToGroup/:id", assignProjectToGroup);
+
+module.exports = router;

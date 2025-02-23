@@ -20,6 +20,15 @@ const getGroupById = async (req, res) => {
   }
 };
 
+const getGroupByName = async (req, res) => {
+  try {
+    const group = await Group.findOne({ name: req.params.name });
+    res.json(group);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getGroupMembers = async (req, res) => {
   try {
     const group = await Group.findById(req.params.id).populate("members");
@@ -100,6 +109,7 @@ const deleteMember = async (req, res) => {
 module.exports = {
   getAllGroups,
   getGroupById,
+  getGroupByName,
   getGroupMembers,
   createGroup,
   updateGroup,

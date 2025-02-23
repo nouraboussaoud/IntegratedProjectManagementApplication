@@ -58,10 +58,16 @@ const getTaskByPriority = async (req, res) => {
     }
 };
 
+//Function to create a new task and assign it to a project by its id. 
+//It will automatically be added to the tasks list of the group
 const createTask = async (req, res) => {
   try {
     const task = new Task(req.body);
+    const project = await Project.findById(req.params.id);
+    task.project = await Project.findById(req.params.id);
+    project.tasks.push(task);
     await task.save();
+    await project.save();
     res.status(201).json(task);
   } catch (error) {
     res.status(500).json({ message: error.message });
