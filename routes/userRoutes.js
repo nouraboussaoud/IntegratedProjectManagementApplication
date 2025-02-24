@@ -15,7 +15,8 @@ const {
   githubAuth,
   githubCallback,
   getAllUsers,
-  toggleBanStatus
+  toggleBanStatus,
+  githubAuth
 } = require("../controllers/userController");
 
 const { isAdmin } = require("../middleware/roleMiddleware");
@@ -41,5 +42,7 @@ router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires 
 // GitHub Authentication Routes
 router.get('/auth/github', githubAuth);
 router.get('/auth/github/callback', passport.authenticate('github', { failureRedirect: '/login' }), githubCallback);
+
+//router.post('/auth/github',githubAuth);
 
 module.exports = router;
