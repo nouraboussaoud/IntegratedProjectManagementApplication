@@ -34,6 +34,8 @@ mongoose.connect(process.env.MONGO_URI)
     console.log("projectRoutes type:", typeof projectRoutes);
     console.log("taskRoutes type:", typeof taskRoutes);
     console.log("groupRoutes type:", typeof groupRoutes);
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // User Routes
 app.use("/api/users", userRoutes);

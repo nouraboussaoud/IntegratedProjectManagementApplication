@@ -365,30 +365,7 @@ const toggleBanStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
-const githubAuth = passport.authenticate('github', { scope: ['user:email'] });
 
-const githubCallback = (req, res) => {
-  // Successful authentication, redirect or respond with a token
-  const token = jwt.sign(
-    { userId: req.user._id, role: req.user.role }, 
-    secretKey, 
-    { expiresIn: '1h' }
-  );
-  console.log("Authorization code:", req.query.code);
-  console.log("Access token:", accessToken);
-  console.log("GitHub profile:", profile);
-  res.status(200).json({
-    message: 'GitHub login successful',
-    token,
-    user: {
-      _id: req.user._id,
-      email: req.user.email,
-      role: req.user.role,
-      name: req.user.name,
-      profilePic: req.user.profilePic
-    }
-  });
-};
 
 module.exports = {
     registerUser,
@@ -403,7 +380,5 @@ module.exports = {
     verifyEmail,
     forgotPassword,
     toggleBanStatus,
-    getAllUsers ,
-    githubAuth,
-    githubCallback
+    getAllUsers 
 };
