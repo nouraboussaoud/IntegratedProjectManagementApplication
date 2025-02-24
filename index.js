@@ -4,9 +4,17 @@ const dotenv = require("dotenv");
 const session = require("express-session"); // Import express-session
 const passport = require("passport"); // Import passport
 const userRoutes = require("./routes/userRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const groupRoutes = require("./routes/groupRoutes");
 const cors = require("cors");
 
 dotenv.config();
+const { default: axios } = require("axios");
+const path = require("path");
+
+
+
 
 const app = express();
 
@@ -22,20 +30,10 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDB Connected..."))
     .catch(err => console.error(err));
 
-// Session setup
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your_secret_key', // Use a secure secret from environment variables
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false } // Set to true if using HTTPS
-}));
-
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Load Passport configuration
-require("./middleware/passport"); // Ensure this file exists and configures Passport strategies
+    console.log("userRoutes type:", typeof userRoutes);
+    console.log("projectRoutes type:", typeof projectRoutes);
+    console.log("taskRoutes type:", typeof taskRoutes);
+    console.log("groupRoutes type:", typeof groupRoutes);
 
 // User Routes
 app.use("/api/users", userRoutes);
@@ -45,5 +43,15 @@ if (process.env.NODE_ENV !== "test") {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
+
+// Group Routes
+app.use("/api/groups", groupRoutes);
+
+// Project Routes
+app.use("/api/projects", projectRoutes);
+
+// Task Routes
+app.use("/api/tasks", taskRoutes);
+
 
 module.exports = app;
