@@ -12,11 +12,9 @@ const {
   updatePassword,
   verifyEmail,
   forgotPassword,
-  githubAuth,
-  githubCallback,
+ 
   getAllUsers,
-  toggleBanStatus,
-  githubAuth
+  toggleBanStatus
 } = require("../controllers/userController");
 
 const { isAdmin } = require("../middleware/roleMiddleware");
@@ -40,9 +38,7 @@ router.post('/forgot-password', forgotPassword); // Forgot password doesn't requ
 router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires token 🚀
 
 // GitHub Authentication Routes
-router.get('/auth/github', githubAuth);
-router.get('/auth/github/callback', passport.authenticate('github', { failureRedirect: '/login' }), githubCallback);
-
-//router.post('/auth/github',githubAuth);
+//router.get('/auth/github', githubAuth);
+//router.get('/auth/github/callback', passport.authenticate('github', { failureRedirect: '/login' }), githubCallback);
 
 module.exports = router;

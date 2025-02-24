@@ -16,20 +16,21 @@ const {
     assignTask,
     sortTasksByPriority,
 } = require("../controllers/taskController");
+const { verifyToken } = require("../controllers/userController");
 
-router.get("/getAllTasks", getAllTasks);
-router.get("/getTaskById/:id", getTaskById);
-router.get("/getTaskByName/:name", getTaskByName);
-router.get("/getTaskByProject/:id", getTaskByProject);
-router.get("/getTaskByUser/:id", getTaskByUser);
-router.get("/getTaskByPriority/:priority", getTaskByPriority);
-router.post("/createTask/:id", createTask);
-router.put("/updateTask/:id", updateTask);
-router.delete("/deleteTask/:id", deleteTask);
-router.put("/setTaskPending/:id", setTaskPending);
-router.put("/setTaskInProgress/:id", setTaskInProgress);
-router.put("/setTaskCompleted/:id", setTaskCompleted);
-router.put("/assignTask/:id", assignTask);
-router.get("/sortTasksByPriority", sortTasksByPriority);
+router.get("/getAllTasks",verifyToken , getAllTasks);
+router.get("/getTaskById/:id",verifyToken , getTaskById);
+router.get("/getTaskByName/:name",verifyToken , getTaskByName);
+router.get("/getTaskByProject/:id",verifyToken , getTaskByProject);
+router.get("/getTaskByUser/:id",verifyToken , getTaskByUser);
+router.get("/getTaskByPriority/:priority",verifyToken , getTaskByPriority);
+router.post("/createTask/:id",verifyToken , createTask);
+router.put("/updateTask/:id",verifyToken , updateTask);
+router.delete("/deleteTask/:id",verifyToken , deleteTask);
+router.put("/setTaskPending/:id",verifyToken , setTaskPending);
+router.put("/setTaskInProgress/:id",verifyToken , setTaskInProgress);
+router.put("/setTaskCompleted/:id",verifyToken , setTaskCompleted);
+router.put("/assignTask/:id",verifyToken , assignTask);
+router.get("/sortTasksByPriority",verifyToken , sortTasksByPriority);
 
 module.exports = router;
