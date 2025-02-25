@@ -18,7 +18,7 @@ console.log(process.env.GOOGLE_CLIENT_SECRET);
 
 const app = express();
 app.use(session({
-    secret: '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',  // Utilisez un secret aléatoire pour sécuriser la session
+    secret: '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',  // Utilisez un secret aléatoire pour sécuriser la session
     resave: false,
     saveUninitialized: false,
     cookie: {
