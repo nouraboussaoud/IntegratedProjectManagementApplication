@@ -6,10 +6,7 @@ const crypto = require('crypto');
 const passport = require('passport');
 
 const mongoose = require('mongoose');
-const axios = require('axios');
-
-const GITHUB_CLIENT_ID = 'Ov23liDt1cBCD2aFlRUl';
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_SECRET_KEY || 'your_secret_key_here';
+const { log } = require("console");
 const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
 
 // Setup mail transporter
@@ -17,7 +14,7 @@ const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: 'aboussaoudnour436@gmail.com', // Update with your email
-        pass: 'edeuouehncqbnawp' // Update with your email password (use environment variables for security in production)
+        pass: 'emmqtptzxkvtdsej' // Update with your email password (use environment variables for security in production)
     }
 });
 
@@ -149,8 +146,6 @@ const getAllUsers = async (req, res) => {
     }
 };
   
-
-
 
 // Logout (Sign Out)
 const logoutUser = (req, res) => {
@@ -365,7 +360,40 @@ const toggleBanStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+// Add these to your userController.js file
 
+
+// GitHub Auth Initialization
+const githubAuth = passport.authenticate('github', { scope: ['user:email'] });
+
+// GitHub Auth Callback
+const githubCallback = (req, res, next) => {
+  passport.authenticate('github', { session: false }, (err, user, info) => {
+    if (err) {
+      console.error("GitHub authentication error:", err);
+      return res.redirect('http://localhost:3000/login?error=github_auth_failed');
+    }
+    
+    if (!user) {
+      console.error("GitHub authentication failed - no user:", info);
+      return res.redirect('http://localhost:3000/login?error=github_auth_failed');
+    }
+    
+    // Generate JWT token
+    const secretKey = process.env.JWT_SECRET || 'mysecretkey';
+    const token = jwt.sign(
+      { id: user._id, role: user.role }, 
+      secretKey, 
+      { expiresIn: '1h' }
+    );
+    
+    // Redirect to frontend with token
+    console.log("token", token);
+    
+    res.redirect(`http://localhost:3000/student-dashboard?token=${token}`);
+      })(req, res, next);
+
+};
 
 module.exports = {
     registerUser,
@@ -380,5 +408,7 @@ module.exports = {
     verifyEmail,
     forgotPassword,
     toggleBanStatus,
-    getAllUsers 
+    getAllUsers ,
+    githubAuth,
+    githubCallback
 };

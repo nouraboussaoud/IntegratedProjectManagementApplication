@@ -1,5 +1,4 @@
 const express = require("express");
-const passport = require('passport'); // Add this line
 const {
   registerUser,
   loginUser,
@@ -12,9 +11,10 @@ const {
   updatePassword,
   verifyEmail,
   forgotPassword,
- 
   getAllUsers,
-  toggleBanStatus
+  toggleBanStatus,
+  githubAuth,
+  githubCallback
 } = require("../controllers/userController");
 
 const { isAdmin } = require("../middleware/roleMiddleware");
@@ -37,8 +37,8 @@ router.get('/verify-email/:verificationToken', verifyEmail); //🚀
 router.post('/forgot-password', forgotPassword); // Forgot password doesn't require token done with front 🚀
 router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires token 🚀
 
-// GitHub Authentication Routes
-//router.get('/auth/github', githubAuth);
-//router.get('/auth/github/callback', passport.authenticate('github', { failureRedirect: '/login' }), githubCallback);
+router.get('/auth/github', githubAuth);
+router.get('/auth/github/callback', githubCallback);
 
-module.exports = router;
+
+module.exports = router;
