@@ -3,9 +3,13 @@ const nodemailer = require('nodemailer');
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const passport = require('passport');
 
 const mongoose = require('mongoose');
+const axios = require('axios');
 
+const GITHUB_CLIENT_ID = 'Ov23liDt1cBCD2aFlRUl';
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_SECRET_KEY || 'your_secret_key_here';
 const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
 
 // Setup mail transporter
@@ -85,7 +89,7 @@ const getAllUsers = async (req, res) => {
     }
   };
   //////////login
-  const loginUser = async (req, res) => {
+  const loginUser = async (req, res) => { 
     try {
         console.log("Données reçues :", req.body);
         // Find the user
@@ -98,7 +102,7 @@ const getAllUsers = async (req, res) => {
 
         console.log('User found:', user); // Debugging log
 
-        // Compare passwords - make sure to await the comparison
+        // Compare passwords 
         const isMatch = await bcrypt.compare(req.body.password, user.password);
         
         console.log('Password match:', isMatch); // Debugging log
@@ -132,7 +136,8 @@ const getAllUsers = async (req, res) => {
                 _id: user._id,
                 email: user.email,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                profilePic: user.profilePic
             }
         });
 
@@ -361,6 +366,8 @@ const toggleBanStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+
 module.exports = {
     registerUser,
     loginUser,
@@ -374,5 +381,5 @@ module.exports = {
     verifyEmail,
     forgotPassword,
     toggleBanStatus,
-    getAllUsers
+    getAllUsers 
 };
