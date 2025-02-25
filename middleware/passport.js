@@ -1,43 +1,41 @@
-const passport = require('passport');
-const GitHubStrategy = require('passport-github').Strategy;
-const User = require('../models/User'); // Adjust the path as needed
+const passport = require("passport");
+const GitHubStrategy = require("passport-github2").Strategy;
+const User = require("../models/User");
 
-passport.use(new GitHubStrategy({
-    clientID: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: "http://localhost:5000/api/users/auth/github/callback"
-  },
-  async (accessToken, refreshToken, profile, done) => {
-    try {
-      let user = await User.findOne({ githubId: profile.id });
-
-      if (!user) {
-        user = new User({
-          githubId: profile.id,
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          profilePic: profile.photos[0].value,
-          role: 'student' // Default role, adjust as needed
-        });
-        await user.save();
+module.exports = function () {
+  passport.use(
+    new GitHubStrategy(
+      {
+        clientID:"Ov23lizUQfOx6neZKDi7",
+        clientSecret: "5fd2bb56606be3b4ec03c5e1b9b6fd2f12ea62dc",
+        callbackURL: "http://localhost:5000/api/users/auth/github/callback",
+        scope: ["user:email"],
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        console.log("GitHub Profile:", profile);
+        console.log("Access Token:", accessToken);
+  
+        if (!accessToken) {
+          console.error("Failed to get access token");
+          return done(new Error("GitHub did not return an access token"), null);
+        }
+  
+        let user = await User.findOne({ githubId: profile.id });
+  
+        if (!user) {
+          user = new User({
+            githubId: profile.id,
+            name: profile.displayName || profile.username,
+            email: profile.emails?.[0]?.value || null,
+            provider: "github",
+            profilePic: profile.photos?.[0]?.value || null,
+            isActive: true,
+          });
+  
+          await user.save();
+        }
+        return done(null, user);
       }
-
-      return done(null, user);
-    } catch (err) {
-      return done(err, false);
-    }
-  }
-));
-
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findById(id);
-    done(null, user);
-  } catch (err) {
-    done(err, null);
-  }
-});
+    )
+  );
+};  
