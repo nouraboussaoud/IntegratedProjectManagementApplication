@@ -12,18 +12,21 @@ const User = require("../models/User"); // Adjust path if needed
 const app = require("../index"); // Ensure this is the Express app instance
 
 let mongoServer;
+jest.setTimeout(10000); // Increase timeout to 10 seconds
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
 
   // If there is an existing mongoose connection, disconnect before connecting
-  if (mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
   }
 
   // Establish the connection to the in-memory MongoDB instance
-  await mongoose.connect(mongoUri, { dbName: "testDB" });
+  await mongoose.connect(mongoServer.getUri(), {
+    useNewUrlParser: true,//for deprecation warnings
+    useUnifiedTopology: true, //for deprecation warnings
+  });
 });
 
 afterEach(async () => {
@@ -33,7 +36,6 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.connection.close(); // Close the connection after all tests
-  await mongoServer.stop(); // Stop the in-memory MongoDB server
 
 });
 

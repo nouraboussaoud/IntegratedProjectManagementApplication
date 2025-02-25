@@ -3,8 +3,13 @@ const nodemailer = require('nodemailer');
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const passport = require('passport');
 
 const mongoose = require('mongoose');
+const axios = require('axios');
+
+const GITHUB_CLIENT_ID = 'Ov23liDt1cBCD2aFlRUl';
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_SECRET_KEY || 'your_secret_key_here';
 const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
 
 // Setup mail transporter
@@ -360,6 +365,8 @@ const toggleBanStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+
 module.exports = {
     registerUser,
     loginUser,
@@ -373,5 +380,5 @@ module.exports = {
     verifyEmail,
     forgotPassword,
     toggleBanStatus,
-    getAllUsers
+    getAllUsers 
 };
