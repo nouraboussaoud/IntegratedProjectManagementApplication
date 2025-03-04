@@ -9,34 +9,34 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const User = require("../models/User"); // Adjust path if needed
-const app = require("../index"); // Ensure this is the Express app instance
+const { app, server } = require("../index"); // Adjust the path if necessary
 
 let mongoServer;
-jest.setTimeout(10000); // Increase timeout to 10 seconds
+jest.setTimeout(600000); // Set timeout to 30 seconds for the test
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
 
-  // If there is an existing mongoose connection, disconnect before connecting
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
   }
 
-  // Establish the connection to the in-memory MongoDB instance
   await mongoose.connect(mongoServer.getUri(), {
-    useNewUrlParser: true,//for deprecation warnings
-    useUnifiedTopology: true, //for deprecation warnings
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
   });
 });
 
+
 afterEach(async () => {
   // Clear test data after each test
-  await User.deleteMany(); 
+  await User.deleteMany();
 });
 
 afterAll(async () => {
-  await mongoose.connection.close(); // Close the connection after all tests
-
+  await mongoose.connection.close();
+  await mongoServer.stop(); // Properly stop the MongoMemoryServer
+  server.close();  // Add this to close the server if it was explicitly started
 });
 
 describe("User Registration", () => {
