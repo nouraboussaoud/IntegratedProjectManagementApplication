@@ -35,12 +35,13 @@ app.use(
 
 // Register Routes
 app.use("/api/users", userRoutes);
-
-// Start server
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
-module.exports = app;
+// Start server
+const PORT = process.env.PORT || 5001;
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+
+module.exports ={app , server};
