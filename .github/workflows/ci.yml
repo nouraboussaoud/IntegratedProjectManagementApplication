@@ -11,7 +11,7 @@ jobs:
         image: mongo:latest
         ports:
           - 27017:27017
-        options: --health-cmd="curl --silent --fail localhost:27017 || exit 1" --health-interval=6m --health-timeout=5s --health-retries=10
+        options: --health-cmd="curl --silent --fail localhost:27017 || exit 1" --health-interval=2m --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout Code
