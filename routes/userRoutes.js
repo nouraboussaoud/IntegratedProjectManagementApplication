@@ -18,7 +18,7 @@ const {
 } = require("../controllers/userController");
 
 const { isAdmin } = require("../middleware/roleMiddleware");
-const { upload } = require("../middleware/uploadimage");
+const { upload } = require("../uploadimage");
 const router = express.Router();
 
 // Protect the routes with verifyToken middleware
