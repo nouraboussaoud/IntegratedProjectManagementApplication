@@ -25,6 +25,16 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Wait for MongoDB to be ready
+        run: |
+          echo "Waiting for MongoDB to be ready..."
+          for i in {1..30}; do
+            curl --silent --fail localhost:27017 && echo "MongoDB is ready!" && exit 0
+            echo "MongoDB not ready yet. Retrying..."
+            sleep 10
+          done
+          echo "MongoDB failed to start in time" && exit 1
+
       - name: Run Tests
         run: npm test
 
