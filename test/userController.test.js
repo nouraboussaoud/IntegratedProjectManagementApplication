@@ -6,7 +6,6 @@ nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
 
 const request = require("supertest");
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const User = require("../models/User"); // Adjust path if needed
 const { app, server } = require("../index"); // Adjust the path if necessary
@@ -15,9 +14,10 @@ let mongoServer;
 jest.setTimeout(30000); // Set timeout to 30 seconds globally
 
 beforeAll(async () => {
+  // Start an in-memory MongoDB server
   mongoServer = await MongoMemoryServer.create();
 
-  await mongoose.disconnect(); // Ensure clean state before connecting
+  // Connect to the in-memory database
   await mongoose.connect(mongoServer.getUri(), {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -30,9 +30,12 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await mongoose.connection.close(); // Close Mongoose connection first
-  await mongoServer.stop(); // Stop MongoMemoryServer
-  server.close(); // Ensure Express server shuts down
+  // Close the database connection and stop the in-memory server
+  await mongoose.connection.close();
+  await mongoServer.stop();
+
+  // Close the Express server
+  server.close();
 });
 
 describe("User Registration", () => {
@@ -41,7 +44,7 @@ describe("User Registration", () => {
       name: "Test User",
       email: "testuser@example.com",
       password: "password123",
-      role: "student"
+      role: "student",
     };
 
     const response = await request(app)
@@ -55,21 +58,23 @@ describe("User Registration", () => {
   });
 
   it("should return 400 if email already exists", async () => {
+    // Create an existing user
     const existingUser = new User({
       name: "Existing User",
       email: "existinguser@example.com",
       password: "password123",
-      role: "student"
+      role: "student",
     });
     await existingUser.save();
 
+    // Try to register the same user again
     const response = await request(app)
       .post("/api/users/register")
       .send({
         name: "New User",
         email: "existinguser@example.com", // Same email as existing user
         password: "password123",
-        role: "student"
+        role: "student",
       })
       .expect(400);
 
@@ -83,7 +88,7 @@ describe("User Registration", () => {
         name: "Invalid Role User",
         email: "invalidroleuser@example.com",
         password: "password123",
-        role: "invalidrole"
+        role: "invalidrole", // Invalid role
       })
       .expect(400);
 
