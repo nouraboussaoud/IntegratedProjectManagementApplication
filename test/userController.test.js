@@ -73,7 +73,7 @@ describe("User Registration", () => {
       })
       .expect(400);
 
-    expect(response.body).toHaveProperty("message", "Email already exists");
+    expect(response.body).toHaveProperty("message", "User already exists");
   });
 
   it("should return 400 for invalid role", async () => {
@@ -87,6 +87,6 @@ describe("User Registration", () => {
       })
       .expect(400);
 
-    expect(response.body).toHaveProperty("message", "Invalid role");
+    expect(response.body).toHaveProperty("message", "Invalid role selection");
   });
 });
