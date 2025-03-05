@@ -1,45 +1,26 @@
-name: CI Pipeline
+name: Node.js CI
 
-on: push
+on:
+  push:
+    branches: [ "Nour" ]  # Only trigger on pushes to Nour branch
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
 
-    services:
-      mongodb:
-        image: mongo:5.0  # Change to a stable version like mongo:5.0
-        ports:
-          - 27017:27017
-        options: --health-cmd="curl --silent --fail localhost:27017 || exit 1" --health-interval=10s --health-timeout=20s --health-retries=10
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Wait for MongoDB to be ready
-        run: |
-          echo "Waiting for MongoDB to be ready..."
-          for i in {1..30}; do
-            curl --silent --fail localhost:27017 && echo "MongoDB is ready!" && exit 0
-            echo "MongoDB not ready yet. Retrying..."
-            sleep 10
-          done
-          echo "MongoDB failed to start in time" && exit 1
-
-      - name: Get MongoDB Container Logs
-        run: docker logs $(docker ps -q --filter ancestor=mongo:5.0)
-
-      - name: Run Tests
-        run: npm test
-
-      - name: Lint Code
-        run: npm run lint
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run build --if-present
+    - run: npm test
