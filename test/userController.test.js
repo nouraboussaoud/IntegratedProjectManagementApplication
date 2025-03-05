@@ -12,21 +12,17 @@ const User = require("../models/User"); // Adjust path if needed
 const { app, server } = require("../index"); // Adjust the path if necessary
 
 let mongoServer;
-jest.setTimeout(600000); // Set timeout to 30 seconds for the test
+jest.setTimeout(30000); // Set timeout to 30 seconds globally
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
 
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.disconnect();
-  }
-
+  await mongoose.disconnect(); // Ensure clean state before connecting
   await mongoose.connect(mongoServer.getUri(), {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
 });
-
 
 afterEach(async () => {
   // Clear test data after each test
@@ -34,14 +30,13 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await mongoose.connection.close();
-  await mongoServer.stop(); // Properly stop the MongoMemoryServer
-  server.close();  // Add this to close the server if it was explicitly started
+  await mongoose.connection.close(); // Close Mongoose connection first
+  await mongoServer.stop(); // Stop MongoMemoryServer
+  server.close(); // Ensure Express server shuts down
 });
 
 describe("User Registration", () => {
   it("should register a new user successfully", async () => {
-    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
     const newUser = {
       name: "Test User",
       email: "nourab000@icloud.com",
@@ -50,7 +45,7 @@ describe("User Registration", () => {
     };
 
     const response = await request(app)
-      .post("/api/users/register") // Adjust the endpoint if necessary
+      .post("/api/users/register") // Adjust endpoint if needed
       .send(newUser)
       .expect(201);
 
@@ -58,7 +53,7 @@ describe("User Registration", () => {
     expect(response.body.user).toHaveProperty("_id");
     expect(response.body.user.email).toBe(newUser.email);
 
-    // Verify that the password is hashed
+    // Verify password hashing
     const createdUser = await User.findOne({ email: newUser.email });
     expect(createdUser).not.toBeNull();
     const isPasswordHashed = await bcrypt.compare(newUser.password, createdUser.password);
@@ -69,8 +64,6 @@ describe("User Registration", () => {
   });
 
   it("should return 400 if email already exists", async () => {
-    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
-
     const existingUser = new User({
       name: "Existing User",
       email: "nour.aboussaoud@esprit.tn",
@@ -83,7 +76,7 @@ describe("User Registration", () => {
       .post("/api/users/register")
       .send({
         name: "New User",
-        email: "nour.aboussaoud@esprit.tn", // Same email as existing user
+        email: "nour.aboussaoud@esprit.tn", // Same email
         password: "newpassword",
         role: "student",
       })
@@ -93,8 +86,6 @@ describe("User Registration", () => {
   });
 
   it("should return 400 for invalid role", async () => {
-    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
-
     const response = await request(app)
       .post("/api/users/register")
       .send({
