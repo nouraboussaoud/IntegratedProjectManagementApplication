@@ -11,7 +11,7 @@ jobs:
         image: mongo:5.0  # Change to a stable version like mongo:5.0
         ports:
           - 27017:27017
-        options: --health-cmd="curl --silent --fail localhost:27017 || exit 1" --health-interval=2m --health-timeout=5s --health-retries=3
+        options: --health-cmd="curl --silent --fail localhost:27017 || exit 1" --health-interval=10s --health-timeout=20s --health-retries=10
 
     steps:
       - name: Checkout Code
