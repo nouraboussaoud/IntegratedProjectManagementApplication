@@ -8,7 +8,7 @@ jobs:
 
     services:
       mongodb:
-        image: mongo:latest
+        image: mongo:5.0  # Change to a stable version like mongo:5.0
         ports:
           - 27017:27017
         options: --health-cmd="curl --silent --fail localhost:27017 || exit 1" --health-interval=2m --health-timeout=5s --health-retries=3
@@ -34,6 +34,9 @@ jobs:
             sleep 10
           done
           echo "MongoDB failed to start in time" && exit 1
+
+      - name: Get MongoDB Container Logs
+        run: docker logs $(docker ps -q --filter ancestor=mongo:5.0)
 
       - name: Run Tests
         run: npm test
