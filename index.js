@@ -14,7 +14,6 @@ const path = require("path");
 
 dotenv.config();
 
-
 const app = express();
 
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
@@ -40,9 +39,9 @@ app.use("/api/users", userRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-module.exports = app;
+module.exports = { app, server };
