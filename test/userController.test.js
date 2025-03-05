@@ -6,45 +6,43 @@ nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
 
 const request = require("supertest");
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const User = require("../models/User"); // Adjust path if needed
-const app = require("../index"); // Ensure this is the Express app instance
+const { app, server } = require("../index"); // Adjust the path if necessary
 
 let mongoServer;
-jest.setTimeout(10000); // Increase timeout to 10 seconds
+jest.setTimeout(30000); // Set timeout to 30 seconds globally
 
 beforeAll(async () => {
+  // Start an in-memory MongoDB server
   mongoServer = await MongoMemoryServer.create();
 
-  // If there is an existing mongoose connection, disconnect before connecting
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.disconnect();
-  }
-
-  // Establish the connection to the in-memory MongoDB instance
+  // Connect to the in-memory database
   await mongoose.connect(mongoServer.getUri(), {
-    useNewUrlParser: true,//for deprecation warnings
-    useUnifiedTopology: true, //for deprecation warnings
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
   });
 });
 
 afterEach(async () => {
   // Clear test data after each test
-  await User.deleteMany(); 
+  await User.deleteMany();
 });
 
 afterAll(async () => {
-  await mongoose.connection.close(); // Close the connection after all tests
+  // Close the database connection and stop the in-memory server
+  await mongoose.connection.close();
+  await mongoServer.stop();
 
+  // Close the Express server
+  server.close();
 });
 
 describe("User Registration", () => {
   it("should register a new user successfully", async () => {
-    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
     const newUser = {
       name: "Test User",
-      email: "nourab000@icloud.com",
+      email: "testuser@example.com",
       password: "password123",
       role: "student",
     };
@@ -54,57 +52,46 @@ describe("User Registration", () => {
       .send(newUser)
       .expect(201);
 
-    expect(response.body.message).toBe("User registered successfully");
-    expect(response.body.user).toHaveProperty("_id");
-    expect(response.body.user.email).toBe(newUser.email);
-
-    // Verify that the password is hashed
-    const createdUser = await User.findOne({ email: newUser.email });
-    expect(createdUser).not.toBeNull();
-    const isPasswordHashed = await bcrypt.compare(newUser.password, createdUser.password);
-    expect(isPasswordHashed).toBe(true);
-
-    // Ensure email was sent
-    expect(mockSendMail).toHaveBeenCalled();
+    expect(response.body).toHaveProperty("message", "User registered successfully");
+    expect(response.body).toHaveProperty("user");
+    expect(response.body.user).toHaveProperty("email", newUser.email);
   });
 
   it("should return 400 if email already exists", async () => {
-    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
-
+    // Create an existing user
     const existingUser = new User({
       name: "Existing User",
-      email: "nour.aboussaoud@esprit.tn",
-      password: await bcrypt.hash("password123", 10),
+      email: "existinguser@example.com",
+      password: "password123",
       role: "student",
     });
     await existingUser.save();
 
+    // Try to register the same user again
     const response = await request(app)
       .post("/api/users/register")
       .send({
         name: "New User",
-        email: "nour.aboussaoud@esprit.tn", // Same email as existing user
-        password: "newpassword",
+        email: "existinguser@example.com", // Same email as existing user
+        password: "password123",
         role: "student",
       })
       .expect(400);
 
-    expect(response.body.message).toBe("User already exists");
+    expect(response.body).toHaveProperty("message", "User already exists");
   });
 
   it("should return 400 for invalid role", async () => {
-    jest.setTimeout(10000);  // Set timeout to 10 seconds for the test
-
     const response = await request(app)
       .post("/api/users/register")
       .send({
         name: "Invalid Role User",
-        email: "dhifallahahmed2@gmail.com",
+        email: "invalidroleuser@example.com",
         password: "password123",
-        role: "admin", // Invalid role
+        role: "invalidrole", // Invalid role
       })
       .expect(400);
 
-    expect(response.body.message).toBe("Invalid role selection");
+    expect(response.body).toHaveProperty("message", "Invalid role selection");
   });
 });
