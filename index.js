@@ -23,7 +23,7 @@ const path = require("path");
 
 const app = express();
 app.use(session({
-    secret: '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',  // Utilisez un secret aléatoire pour sécuriser la session
+    secret: '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',  // Utilisez un secret aléatoire pour sécuriser la session
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -68,7 +68,7 @@ app.get('/auth/google/callback',
       );
   
       // Rediriger vers le frontend avec le token et les informations de l'utilisateur
-      res.redirect(`http://localhost:3000/student-dashboard?token=${token}&user=${JSON.stringify(req.user)}`);
+      res.redirect(`http://localhost:3000/student-dashboard`);
     }
   );
 
