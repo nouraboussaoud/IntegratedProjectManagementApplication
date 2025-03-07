@@ -2,7 +2,7 @@ const express = require('express');
 const User = require("../models/User");
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
-const router = express.Router();
+
 const passport =require ("passport");
 const {
   registerUser,
@@ -16,15 +16,16 @@ const {
   updatePassword,
   verifyEmail,
   forgotPassword,
- 
   getAllUsers,
-  toggleBanStatus
+  toggleBanStatus,
+  githubAuth,
+  githubCallback
 } = require("../controllers/userController");
 
-const { isAdmin } = require("../middleware/roleMiddleware");
-const { upload } = require("../middleware/uploadimage");
 
-// Route pour initier l'authentification Google
+const { isAdmin } = require("../middleware/roleMiddleware");
+const { upload } = require("../uploadimage");
+const router = express.Router();
 router.get("/google", 
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
@@ -39,29 +40,6 @@ router.get("/google/callback",
   }
 );
 
-// Route pour vérifier si l'utilisateur est bien authentifié
-router.get("/login/success", (req, res) => {
-  if (req.user) {
-    res.status(200).json({
-      success: true,
-      message: "Authentication successful",
-      user: req.user,
-    });
-  } else {
-    res.status(403).json({
-      error: true,
-      message: "Not authorized",
-    });
-  }
-});
-
-// Route pour gérer la déconnexion
-router.get("/logout", (req, res) => {
-  req.logout((err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.redirect(process.env.CLIENT_URL);
-  });
-});
 // Protect the routes with verifyToken middleware
 router.get('/getAll', verifyToken, getAllUsers); // Get all users requires token
 router.post('/register', upload.single('profilePic'), registerUser); // 'profilePic' should match the name in your frontend form 🚀
@@ -78,8 +56,8 @@ router.get('/verify-email/:verificationToken', verifyEmail); //🚀
 router.post('/forgot-password', forgotPassword); // Forgot password doesn't require token done with front 🚀
 router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires token 🚀
 
-// GitHub Authentication Routes
-//router.get('/auth/github', githubAuth);
-//router.get('/auth/github/callback', passport.authenticate('github', { failureRedirect: '/login' }), githubCallback);
+router.get('/auth/github', githubAuth);
+router.get('/auth/github/callback', githubCallback);
 
-module.exports = router;
+
+module.exports = router;
