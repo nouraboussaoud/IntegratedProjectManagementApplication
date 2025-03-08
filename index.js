@@ -6,13 +6,14 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken"); // Import JWT
 const fetch = require("node-fetch"); // Import fetch (if needed for Node.js)
 const User = require("./models/User"); 
-require("dotenv").config(); // Load environment variables
-const userRoutes = require("./routes/userRoutes");
-const passport = require('passport');
-require("./middleware/passport")(); // Ensure passport is initialized
 const path = require("path");
+const passport = require('passport');
+const userRoutes = require("./routes/userRoutes");
+const deliverableRoutes = require("./routes/deliverableRoutes");
 
-dotenv.config();
+dotenv.config(); // Load environment variables
+
+require("./middleware/passport")(); // Ensure passport is initialized
 
 const app = express();
 
@@ -34,14 +35,15 @@ app.use(
   })
 );
 
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Register Routes
 app.use("/api/users", userRoutes);
+app.use("/api/deliverables", deliverableRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 module.exports = { app, server };
