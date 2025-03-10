@@ -8,6 +8,7 @@ const fetch = require("node-fetch"); // Import fetch (if needed for Node.js)
 const User = require("./models/User"); 
 require("dotenv").config(); // Load environment variables
 const userRoutes = require("./routes/userRoutes");
+const groupRoutes = require("./routes/groupRoutes");
 const passport = require('passport');
 require("./middleware/passport")(); // Ensure passport is initialized
 const path = require("path");
@@ -47,7 +48,7 @@ app.use(
 
 // Register Routes
 app.use("/api/users", userRoutes);
-
+app.use("/api/groups", groupRoutes);
 // Start server
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

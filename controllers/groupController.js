@@ -1,15 +1,15 @@
 const User = require("../models/User");
 const Group = require("../models/Group");
 const mongoose = require('mongoose');
-
 const getAllGroups = async (req, res) => {
   try {
-    const groups = await Group.find();
+    const groups = await Group.find().populate("members", "name email"); // Assurez-vous que vous récupérez `name` et `email`
     res.json(groups);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 const getGroupById = async (req, res) => {
   try {

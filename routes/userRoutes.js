@@ -36,6 +36,13 @@ router.get("/google/callback",
     failureRedirect: "/login/failed"
   }),
   (req, res) => {
+    const user = req.user; // Récupérer l'utilisateur de la requête après l'authentification avec Google
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Créer un token JWT
+    const userData = {
+      name: user.name,
+      email: user.email,
+      profilePic: user.profilePic,
+    };
     res.redirect(`${process.env.CLIENT_URL}/student-dashboard`); // Redirige vers la bonne page après connexion
   }
 );
