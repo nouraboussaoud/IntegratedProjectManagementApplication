@@ -4,31 +4,25 @@ const dotenv = require("dotenv");
 const session = require("express-session");
 const cors = require("cors");
 const { initializeSocketServer } = require("./socket/socketServer");
-const jwt = require("jsonwebtoken"); // Import JWT
-const fetch = require("node-fetch"); // Import fetch (if needed for Node.js)
+const jwt = require("jsonwebtoken");
+const fetch = require("node-fetch");
 const User = require("./models/User");
-require("dotenv").config(); // Load environment variables
 const userRoutes = require("./routes/userRoutes");
-const messageRoutes = require("./routes/messageRoutes"); // Ensure this path is correct
+const messageRoutes = require("./routes/messageRoutes");
 const passport = require('passport');
-require("./middleware/passport")(); // Ensure passport is initialized
+require("./middleware/passport")();
 const path = require("path");
 
 dotenv.config();
 
+// Create Express app
 const app = express();
 
+// Middleware setup
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected..."))
-  .catch((err) => console.error(err));
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",
@@ -37,20 +31,44 @@ app.use(
     cookie: { secure: false },
   })
 );
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Register Routes
 app.use("/api/users", userRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Start server
-const PORT = process.env.PORT || 5001;
-const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Create a function to connect to the database
+const connectDB = async (connectionString = process.env.MONGO_URI) => {
+  try {
+    await mongoose.connect(connectionString, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("MongoDB Connected...");
+    return true;
+  } catch (err) {
+    console.error("Database connection error:", err);
+    return false;
+  }
+};
 
-// Initialize Socket.IO
-const io = initializeSocketServer(server);
-app.set('io', io); // Store io instance in the app for use in controllers
+// Create a function to start the server
+const startServer = (port = process.env.PORT || 5001) => {
+  const server = app.listen(port, () => console.log(`Server running on port ${port}`));
+  
+  // Initialize Socket.IO
+  const io = initializeSocketServer(server);
+  app.set('io', io);
+  
+  return server;
+};
 
-app.use(passport.initialize());
-app.use(passport.session());
+// Only connect to the database and start the server if this file is run directly
+let server;
+if (require.main === module) {
+  connectDB();
+  server = startServer();
+}
 
-module.exports = { app, server };
+module.exports = { app, server, connectDB, startServer };
