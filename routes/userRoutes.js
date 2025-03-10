@@ -2,7 +2,7 @@ const express = require('express');
 const User = require("../models/User");
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
-
+ // Middleware d'authentification
 const passport =require ("passport");
 const {
   registerUser,
@@ -58,6 +58,7 @@ router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires 
 
 router.get('/auth/github', githubAuth);
 router.get('/auth/github/callback', githubCallback);
+
 
 
 module.exports = router;

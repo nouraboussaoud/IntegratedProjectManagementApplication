@@ -55,18 +55,40 @@ const server = app.listen(PORT, () => console.log(`Server running on port ${PORT
 app.use(passport.initialize());
 app.use(passport.session());
 app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/' }),
+  passport.authenticate("google", { failureRedirect: "/login/failed" }),
   (req, res) => {
-    // Générer un token JWT pour l'utilisateur
+    if (!req.user) {
+      console.error("❌ Aucun utilisateur trouvé après Google Auth.");
+      return res.redirect("http://localhost:3000/login?error=auth_failed");
+    }
+
+    console.log("✅ Utilisateur authentifié :", req.user);
+
+    // Générer un token JWT
     const token = jwt.sign(
-        { userId: req.user._id, role: req.user.role },
-        process.env.JWT_SECRET_KEY,
-        { expiresIn: '1h' }
+      { userId: req.user._id, role: req.user.role },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
     );
 
-    // Rediriger vers le frontend avec le token et les informations de l'utilisateur
-    res.redirect(`http://localhost:3000/student-dashboard`);
+    // Renvoyer les informations de l'utilisateur
+    const userData = {
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      profilePic: req.user.profilePic, // URL de l'image de profil
+      role: req.user.role,
+    };
+
+    console.log("✅ Données utilisateur à envoyer :", userData);
+
+    // Rediriger vers le frontend avec le token et les données utilisateur
+    const redirectURL = `http://localhost:3000/student-dashboard?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+    console.log("✅ URL de redirection :", redirectURL);
+
+    res.redirect(redirectURL);
   }
 );
+
 
 module.exports = { app, server };
