@@ -36,5 +36,4 @@ jobs:
     - name: Run Tests
       run: npm test
 
-    - name: Start Application (Dev Mode)
-      run: npm run dev
+  
