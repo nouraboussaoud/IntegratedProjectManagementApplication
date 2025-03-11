@@ -2,7 +2,7 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ "Nour" ]  # Only trigger on pushes to Nour branch
+    branches: [ "Nour" ]  # Only trigger on pushes to the Nour branch
 
 jobs:
   build:
@@ -12,7 +12,6 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     services:
       mongodb:
@@ -22,11 +21,36 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: npm test
+
+    - name: Install dependencies
+      run: npm ci
+
+    # ✅ If you're using TypeScript, add a build step
+    - name: Build the project
+      run: npm run build --if-present  # Skipped if no build script exists
+
+    # ✅ Save the Express.js app as an artifact for deployment
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: express-app
+        path: |
+          package.json
+          package-lock.json
+          node_modules/
+          dist/  # If using TypeScript
+          public/ # If serving static files
+          views/  # If using EJS or other templates
+          src/    # Include source files if needed
+          app.js  # Main entry file
+          server.js  # If using a server.js file
+        retention-days: 5  # Keep for 5 days
+
+    - name: Run tests
+      run: npm test
