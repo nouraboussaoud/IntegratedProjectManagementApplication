@@ -1,39 +1,33 @@
-name: Node.js CI
+name: ci
 
 on:
   push:
-    branches: [ "Nour" ]  # Only trigger on pushes to Nour branch
+    branches:
+      - main
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
-    services:
-      mongodb:
-        image: mongo:latest
-        ports:
-          - 27017:27017
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Install Dependencies
-      run: npm ci
+      - name: Build and test
+        uses: docker/build-push-action@v6
+        with:
+          target: test
+          load: true
 
-    - name: Run Tests
-      run: npm test
-
-  
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          target: prod
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
