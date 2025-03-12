@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_IMAGE: nouraboussaoud/integrated-project-management-application
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -26,4 +28,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/integrated-project-management-application:latest
+          tags: ${{ env.DOCKER_IMAGE }}:latest
