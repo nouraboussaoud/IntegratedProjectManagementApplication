@@ -3,19 +3,21 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const session = require("express-session");
 const cors = require("cors");
-const jwt = require("jsonwebtoken"); // Import JWT
-const fetch = require("node-fetch"); // Import fetch (if needed for Node.js)
-const User = require("./models/User"); 
-require("dotenv").config(); // Load environment variables
+const { initializeSocketServer } = require("./socket/socketServer");
+const jwt = require("jsonwebtoken");
+const fetch = require("node-fetch");
+const User = require("./models/User");
 const userRoutes = require("./routes/userRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 const passport = require('passport');
-require("./middleware/passport")(); // Ensure passport is initialized
+require("./middleware/passport")();
 const path = require("path");
 require("./passport"); 
 
 
 dotenv.config();
 
+// Create Express app
 const app = express();
 app.use(session({
   secret: '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',  // Utilisez un secret aléatoire pour sécuriser la session
@@ -29,13 +31,8 @@ app.use(session({
 }));
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected..."))
-  .catch((err) => console.error(err));
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",
@@ -44,6 +41,8 @@ app.use(
     cookie: { secure: false },
   })
 );
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Register Routes
 app.use("/api/users", userRoutes);
@@ -69,4 +68,4 @@ app.get('/auth/google/callback',
   }
 );
 
-module.exports = { app, server };
+module.exports = { app, server, connectDB, startServer };
