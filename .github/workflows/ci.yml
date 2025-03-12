@@ -27,4 +27,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           target: prod
-          tags: ${{ secrets.DOCKER_USERNAME }}/integratedprojectmanagementapplication:latest
+          tags: noura00/integratedprojectmanagementapplication:latest
