@@ -1,11 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
+
 // Initialize socket server
 const initializeSocketServer = (server) => {
   const io = require('socket.io')(server, {
     cors: {
-      origin:  "*", // Your frontend URL
+      origin:  "*",
       methods: ['GET', 'POST'],
       credentials: true
     }
@@ -20,10 +22,7 @@ const initializeSocketServer = (server) => {
       }
       
       // Verify token
-      const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
       const decoded = jwt.verify(token, secretKey);
-      
-      // Store user ID in socket for later use
       socket.userId = decoded.userId;
       
       // Check if user exists and is not banned

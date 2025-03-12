@@ -1,6 +1,70 @@
 const Message = require("../models/Message");
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
+
+const getAllConversations = async (req, res) => {
+  try {
+    const userId = req.userId;
+    console.log("aaaa",userId);
+
+    const conversations = await Message.aggregate([
+      {
+        $match: {
+          $or: [{ sender: new mongoose.Types.ObjectId(userId) }, { receiver: new mongoose.Types.ObjectId(userId) }]
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $group: {
+          _id: {
+            $cond: {
+              if: { $gt: ["$sender", "$receiver"] },
+              then: ["$sender", "$receiver"],
+              else: ["$receiver", "$sender"]
+            }
+          },
+          latestMessage: { $first: "$$ROOT" }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "latestMessage.sender",
+          foreignField: "_id",
+          as: "sender"
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "latestMessage.receiver",
+          foreignField: "_id",
+          as: "receiver"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          latestMessage: {
+            content: 1,
+            createdAt: 1
+          },
+          sender: { $arrayElemAt: ["$sender", 0] }, // Ensure sender is an object
+          receiver: { $arrayElemAt: ["$receiver", 0] } // Ensure receiver is an object
+        }
+      }
+    ]);
+    
+
+    res.status(200).json(conversations);
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 // Send a message to another user
 const sendMessage = async (req, res) => {
   try {
@@ -309,5 +373,6 @@ module.exports = {
   deleteMessage,
   getMessageContacts,
   userTyping,
-  getOnlineUsers
+  getOnlineUsers,
+  getAllConversations
 };

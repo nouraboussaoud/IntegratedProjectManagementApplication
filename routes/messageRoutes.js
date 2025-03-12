@@ -10,9 +10,11 @@ const {
   markAllAsRead, 
   deleteMessage,
   getMessageContacts,
-  getOnlineUsers
+  getOnlineUsers,
+  getAllConversations
 } = require("../controllers/messageController");
 const { upload } = require("../uploadimage");
+const { authenticateUser } = require("../middleware/authMiddleware");
 
 
 // All routes are protected with verifyToken
@@ -25,5 +27,7 @@ router.put('/mark-all-read/:userId', verifyToken, markAllAsRead);
 router.delete('/delete/:messageId', verifyToken, deleteMessage);
 router.get('/contacts', verifyToken, getMessageContacts);
 router.get('/online-users', verifyToken, getOnlineUsers);
+router.get("/conversations", verifyToken, getAllConversations);
+
 
 module.exports = router;
