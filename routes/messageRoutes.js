@@ -14,7 +14,6 @@ const {
   getAllConversations
 } = require("../controllers/messageController");
 const { upload } = require("../uploadimage");
-const { authenticateUser } = require("../middleware/authMiddleware");
 
 
 // All routes are protected with verifyToken
