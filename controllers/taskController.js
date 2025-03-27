@@ -235,6 +235,8 @@ const sortTasksByPriority = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 const updateTaskProgress = async (req, res) => {
   try {
     const { id } = req.params; // Using 'id' instead of 'taskId'
