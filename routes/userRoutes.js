@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
  // Middleware d'authentification
 const passport =require ("passport");
 const {
+ 
   registerUser,
   loginUser,
   logoutUser,
@@ -19,7 +20,9 @@ const {
   getAllUsers,
   toggleBanStatus,
   githubAuth,
-  githubCallback
+  githubCallback,
+ 
+  
 } = require("../controllers/userController");
 
 
@@ -30,22 +33,34 @@ router.get("/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// Route pour gérer la redirection de Google OAuth
 router.get("/google/callback", 
-  passport.authenticate("google", { 
-    failureRedirect: "/login/failed"
-  }),
-  (req, res) => {
-    const user = req.user; // Récupérer l'utilisateur de la requête après l'authentification avec Google
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Créer un token JWT
-    const userData = {
-      name: user.name,
-      email: user.email,
-      profilePic: user.profilePic,
-    };
-    res.redirect(`${process.env.CLIENT_URL}/student-dashboard`); // Redirige vers la bonne page après connexion
+  passport.authenticate("google", { failureRedirect: "/login/failed" }),
+  async (req, res) => {
+    if (!req.user) {
+      console.error("❌ Aucun utilisateur trouvé après Google Auth.");
+      return res.redirect("http://localhost:3000/login?error=auth_failed");
+    }
+
+    console.log("✅ Utilisateur authentifié :", req.user);
+
+    // Générer un token JWT avec le rôle
+    const token = jwt.sign(
+      { userId: req.user._id, role: req.user.role },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+
+    // Construire l'URL de redirection avec le rôle
+    const redirectURL = `http://localhost:3000/login?token=${token}&role=${req.user.role}`;
+    console.log("✅ URL de redirection :", redirectURL);
+
+    // Rediriger le frontend
+    res.redirect(redirectURL);
   }
 );
+
+
+
 
 // Protect the routes with verifyToken middleware
 router.get('/getAll', verifyToken, getAllUsers); // Get all users requires token
@@ -65,7 +80,6 @@ router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires 
 
 router.get('/auth/github', githubAuth);
 router.get('/auth/github/callback', githubCallback);
-
 
 
 module.exports = router;
