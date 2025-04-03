@@ -25,16 +25,63 @@ const getSubjectById = async (req, res) => {
 };
 
 const createSubject = async (req, res) => {
-    try {
-      console.log("Received subject:", req.body);
-      const subject = new Subject(req.body);
-      await subject.save();
-      res.status(201).json(subject);
-    } catch (error) {
-      console.error("Error creating subject:", error);
-      res.status(400).json({ message: error.message });
+  try {
+    // Validation supplémentaire côté serveur
+    if (!req.body.title || !req.body.description) {
+      return res.status(400).json({ 
+        message: "Title and description are required" 
+      });
     }
-  };
+
+    if (req.body.title.length > 100) {
+      return res.status(400).json({ 
+        message: "Title must be less than 100 characters" 
+      });
+    }
+
+    if (req.body.description.length > 500) {
+      return res.status(400).json({ 
+        message: "Description must be less than 500 characters" 
+      });
+    }
+
+    // Nettoyer les données
+    const subjectData = {
+      title: req.body.title.trim(),
+      description: req.body.description.trim(),
+      keyFeatures: req.body.keyFeatures
+        ?.filter(f => f.title?.trim() && f.description?.trim())
+        .map(f => ({
+          title: f.title.trim(),
+          description: f.description.trim()
+        })) || [],
+      aiFunctionalities: req.body.aiFunctionalities
+        ?.filter(f => f.title?.trim() && f.description?.trim())
+        .map(f => ({
+          title: f.title.trim(),
+          description: f.description.trim()
+        })) || []
+    };
+
+    const subject = new Subject(subjectData);
+    await subject.save();
+    
+    res.status(201).json(subject);
+  } catch (error) {
+    console.error("Error creating subject:", error);
+    
+    // Gestion des erreurs de duplication
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: "Subject with this title already exists" 
+      });
+    }
+    
+    res.status(400).json({ 
+      message: error.message || "Error creating subject" 
+    });
+  }
+};
   
   
 

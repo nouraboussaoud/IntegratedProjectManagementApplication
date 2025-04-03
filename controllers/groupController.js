@@ -121,7 +121,7 @@ const createGroup = async (req, res) => {
     console.log("Group created:", group);
 
     const selectedMembers = req.body.members;
-    console.log("Selected members:", selectedMembers);  // Ajoutez un log pour vérifier les membres sélectionnés
+    console.log("Selected members:", selectedMembers);
 
     const emailPromises = selectedMembers.map(async (userId) => {
       const user = await User.findById(userId);
@@ -130,20 +130,29 @@ const createGroup = async (req, res) => {
         return;
       }
 
-      console.log(`Sending email to: ${user.email}`);  // Vérifiez ici l'email de l'utilisateur
+      console.log(`Sending email to: ${user.email}`);
       if (user.email) {
-        await sendInvitationEmail(user.email, group.name, group._id); // Envoi du mail avec le lien d'invitation
+        await sendInvitationEmail(user.email, group.name, group._id);
       } else {
         console.warn(`User with ID ${userId} does not have an email.`);
       }
     });
 
-    await Promise.all(emailPromises);  // Assurez-vous que l'envoi des emails est terminé avant de répondre
-
-    res.status(201).json(group); // Retourner le groupe après succès
+    await Promise.all(emailPromises);
+    res.status(201).json(group);
   } catch (error) {
     console.error("Error during group creation:", error);
-    res.status(400).json({ message: error.message });  // Ajoutez le message d'erreur ici
+    
+    // Gestion spécifique pour les erreurs de duplication
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.name) {
+      return res.status(400).json({ 
+        message: "Group name already exists. Please choose a different name." 
+      });
+    }
+    
+    res.status(400).json({ 
+      message: "Group name already exists. Please choose a different name." 
+    });
   }
 };
 
@@ -269,7 +278,14 @@ const rejectInvitation = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
+const checkGroupName = async (req, res) => {
+  try {
+    const group = await Group.findOne({ name: req.query.name });
+    res.json({ exists: !!group });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   getAllGroups,
   getGroupById,
@@ -281,5 +297,5 @@ module.exports = {
   addMember,
   deleteMember, 
   getMyGroups,
-  rejectInvitation
+  rejectInvitation, checkGroupName
 };
