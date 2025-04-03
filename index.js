@@ -9,6 +9,7 @@ const User = require("./models/User");
 require("dotenv").config(); // Load environment variables
 const userRoutes = require("./routes/userRoutes");
 const groupRoutes = require("./routes/groupRoutes");
+const subjectRoutes = require("./routes/subjectRoutes");
 const passport = require('passport');
 require("./middleware/passport")(); // Ensure passport is initialized
 const path = require("path");
@@ -49,6 +50,7 @@ app.use(
 // Register Routes
 app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
+app.use("/api/subject", subjectRoutes);
 // Start server
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
@@ -59,37 +61,42 @@ app.get('/auth/google/callback',
   passport.authenticate("google", { failureRedirect: "/login/failed" }),
   (req, res) => {
     if (!req.user) {
-      console.error("❌ Aucun utilisateur trouvé après Google Auth.");
+      console.error("❌ No user found after Google Auth.");
       return res.redirect("http://localhost:3000/login?error=auth_failed");
     }
 
-    console.log("✅ Utilisateur authentifié :", req.user);
+    console.log("✅ Authenticated user:", req.user);
 
-    // Générer un token JWT
+    // Generate JWT token
     const token = jwt.sign(
       { userId: req.user._id, role: req.user.role },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
 
-    // Renvoyer les informations de l'utilisateur
+    // Determine redirect path based on role
+    let redirectPath = "/home";
+    if (req.user.role === "admin") redirectPath = "/admin-dashboard";
+    else if (req.user.role === "tutor") redirectPath = "/tutor-dashboard";
+    else if (req.user.role === "student") redirectPath = "/student-dashboard";
+
+    // Prepare user data
     const userData = {
       _id: req.user._id,
       name: req.user.name,
       email: req.user.email,
-      profilePic: req.user.profilePic, // URL de l'image de profil
+      profilePic: req.user.profilePic,
       role: req.user.role,
     };
-
     console.log("✅ Données utilisateur à envoyer :", userData);
-
-    // Rediriger vers le frontend avec le token et les données utilisateur
-    const redirectURL = `http://localhost:3000/student-dashboard?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+    // Construct redirect URL (now declared BEFORE usage)
+    const redirectURL = `http://localhost:3000${redirectPath}?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+    
+    
     console.log("✅ URL de redirection :", redirectURL);
 
     res.redirect(redirectURL);
   }
 );
-
 
 module.exports = { app, server };

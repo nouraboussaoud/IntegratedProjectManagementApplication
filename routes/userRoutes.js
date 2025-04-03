@@ -21,6 +21,9 @@ const {
   toggleBanStatus,
   githubAuth,
   githubCallback,
+  getAvailableSkills,   
+    updateUserSkills,
+    getCurrentUserSkills     
  
   
 } = require("../controllers/userController");
@@ -81,5 +84,8 @@ router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires 
 router.get('/auth/github', githubAuth);
 router.get('/auth/github/callback', githubCallback);
 
+router.get('/skills',  getAvailableSkills);
+router.put('/skills', verifyToken, updateUserSkills);
+router.get('/me/skills', verifyToken, getCurrentUserSkills);
 
 module.exports = router;

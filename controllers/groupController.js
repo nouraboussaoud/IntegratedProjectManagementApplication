@@ -1,5 +1,6 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
+
 const User = require("../models/User");
 const Group = require("../models/Group");
 const mongoose = require('mongoose');
@@ -73,10 +74,12 @@ const sendInvitationEmail = async (userEmail, groupName, userId) => {
 
 
 
-
 const getAllGroups = async (req, res) => {
   try {
-    const groups = await Group.find().populate("members", "name email"); // Assurez-vous que vous récupérez `name` et `email`
+    const groups = await Group.find().populate({
+      path: 'members',
+      select: 'name skills' // Spécifiez explicitement les champs à inclure
+    });
     res.json(groups);
   } catch (error) {
     res.status(500).json({ message: error.message });
