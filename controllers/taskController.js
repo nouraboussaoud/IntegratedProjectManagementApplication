@@ -84,39 +84,57 @@ const getTaskByPriority = async (req, res) => {
 // It will automatically be added to the tasks list of the project
 const createTask = async (req, res) => {
   try {
-    const { title, description, project, priority } = req.body; // Remove assignedTo
-
-    console.log("Received project ID:", project); // Debugging Log
-
+    const { title, description, project, priority, taskDetails } = req.body;
+    
+    console.log("Received project ID:", project);
+    
     // Validate project existence
     const foundProject = await Project.findById(project);
     if (!foundProject) {
-      console.log("Project not found in the database!"); // Debugging Log
+      console.log("Project not found in the database!");
       return res.status(404).json({ message: "Project not found" });
     }
-
+    
     console.log("Project found:", foundProject);
-
+    
     // Extract assigned user from JWT token
-    const assignedTo = req.userId; // Authenticated user
-
-    // Create new task
+    const assignedTo = req.userId;
+    
+    // Créer la nouvelle tâche avec les détails
     const newTask = new Task({
       title,
       description,
-      status: "pending", // Explicitly set status
+      status: "pending",
       project,
-      assignedTo, // Assigned automatically from JWT token
+      assignedTo,
       priority,
-      progressPercentage: 0, // Initial progress set to 0%
-      timeSpent: 0, // Track time spent
+      progressPercentage: 0,
+      timeSpent: 0,
+      taskDetails: taskDetails || "" // Ajout des détails de tâche
     });
-
+    
     await newTask.save();
-
+    
+    // Si des détails de tâche sont fournis, prédire le risque
+    if (taskDetails) {
+      try {
+        // Appeler votre fonction de prédiction
+        const riskPrediction = await predictTaskRisk(taskDetails);
+        
+        if (riskPrediction) {
+          newTask.risk = riskPrediction.risk;
+          newTask.riskConfidence = riskPrediction.confidence;
+          await newTask.save();
+        }
+      } catch (predictionError) {
+        console.error("Error predicting task risk:", predictionError);
+        // Continuer malgré l'erreur de prédiction
+      }
+    }
+    
     foundProject.tasks.push(newTask._id);
     await foundProject.save();
-
+    
     res.status(201).json({
       message: "Task created successfully!",
       task: newTask,
@@ -126,24 +144,57 @@ const createTask = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
+//////////update
 
 const updateTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
-    if (task) {
-      task.title = req.body.title || task.title;
-      task.description = req.body.description || task.description;
-      task.status = req.body.status || task.status;
-      task.project = req.body.project || task.project;
-      task.assignedTo = req.body.assignedTo || task.assignedTo;
-      await task.save();
-      res.json(task);
-    } else {
-      res.status(404).json({ message: "Task not found" });
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // Vérifier si l'ID est valide
+    const { ObjectId } = require('mongoose').Types;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid task ID format" });
     }
+    
+    // Chercher la tâche
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    
+    // Vérifier si l'utilisateur a le droit de modifier cette tâche
+    if (task.assignedTo.toString() !== req.userId) {
+      return res.status(403).json({ message: "Unauthorized: You are not assigned to this task" });
+    }
+    
+    // Vérifier si les détails de la tâche ont été modifiés
+    const taskDetailsChanged = updates.taskDetails && updates.taskDetails !== task.taskDetails;
+    
+    // Appliquer les mises à jour
+    Object.keys(updates).forEach((key) => {
+      task[key] = updates[key];
+    });
+    
+    // Si les détails ont changé, mettre à jour le risque
+    if (taskDetailsChanged && updates.taskDetails) {
+      try {
+        const riskPrediction = await predictTaskRisk(updates.taskDetails);
+        if (riskPrediction) {
+          task.risk = riskPrediction.risk;
+          task.riskConfidence = riskPrediction.confidence;
+        }
+      } catch (predictionError) {
+        console.error("Error updating task risk:", predictionError);
+        // Continuer malgré l'erreur de prédiction
+      }
+    }
+    
+    await task.save();
+    res.status(200).json({ message: "Task updated successfully", task });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error:', error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -236,7 +287,6 @@ const sortTasksByPriority = async (req, res) => {
   }
 };
 
-
 const updateTaskProgress = async (req, res) => {
   try {
     const { id } = req.params; // Using 'id' instead of 'taskId'
@@ -263,12 +313,18 @@ const updateTaskProgress = async (req, res) => {
         return res.status(403).json({ message: "Unauthorized: You are not assigned to this task" });
     }
 
-    // 🔍 Validate progress percentage (0-100)
-    if (progressPercentage !== undefined) {
-        if (progressPercentage < 0 || progressPercentage > 100) {
-            return res.status(400).json({ message: "Progress must be between 0 and 100%" });
-        }
-        task.progressPercentage = progressPercentage;
+    // ✅ Update progress percentage automatically if not provided
+    if (progressPercentage === undefined) {
+      // Example: You can calculate progress automatically based on timeSpent or other metrics
+      if (task.totalEstimatedTime > 0) {
+        task.progressPercentage = Math.min(100, (task.timeSpent / task.totalEstimatedTime) * 100); // Auto-calculate progress based on time spent
+      }
+    } else {
+      // Validate the provided progress percentage (if provided)
+      if (progressPercentage < 0 || progressPercentage > 100) {
+        return res.status(400).json({ message: "Progress must be between 0 and 100%" });
+      }
+      task.progressPercentage = progressPercentage;
     }
 
     // ✅ Update status & set completion date if necessary
@@ -295,6 +351,7 @@ const updateTaskProgress = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 const getTaskWithProgress = async (req, res) => {
   try {
@@ -366,6 +423,7 @@ const trackGitHubCommits = async (req, res) => {
     const rateLimitResponse = await fetch("https://api.github.com/rate_limit", {
       headers: { Authorization: `token ${GITHUB_TOKEN}` },
     });
+    console.log("Rate Limit Response Status:", rateLimitResponse.status);  // Log the status
 
     if (!rateLimitResponse.ok) {
       return res.status(500).json({ message: "Error checking GitHub rate limit" });
@@ -404,7 +462,101 @@ const trackGitHubCommits = async (req, res) => {
   }
 };
 
+// Function to handle task risk prediction
+// Fonction utilitaire pour prédire le risque
+const predictTaskRisk = async (taskDetails) => {
+  const HUGGING_FACE_API_KEY = process.env.HUGGING_FACE_API_KEY;
+  
+  if (!taskDetails) {
+    return null;
+  }
+  
+  try {
+    // Appel à l'API Hugging Face pour la prédiction
+    const response = await fetch("https://api-inference.huggingface.co/models/facebook/bart-large-mnli", {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: `Predict deadline risk based on: ${taskDetails}`,
+        parameters: { candidate_labels: ["High Risk", "Low Risk"] },
+      }),
+    });
+    
+    const result = await response.json();
+    console.log('Hugging Face response:', result);
+    
+    if (result && result.labels && result.scores && result.labels.length > 0) {
+       // Trouver l'index du score le plus élevé
+       const maxIndex = result.scores.indexOf(Math.max(...result.scores));
+      
+      return {
+        risk: result.labels[maxIndex],
+        confidence: result.scores[maxIndex],
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error predicting risk:', error);
+    return null;
+  }
+};
 
+
+const predictRisk = async (req, res) => {
+  const { taskId, taskDetails } = req.body;
+  
+  // Si un ID de tâche est fourni sans détails, utiliser les détails existants
+  if (taskId && !taskDetails) {
+    try {
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const result = await predictTaskRisk(task.taskDetails);
+      if (!result) {
+        return res.status(400).json({ message: "Unable to get a prediction from the model." });
+      }
+      
+      // Mettre à jour la tâche avec la nouvelle prédiction
+      task.risk = result.risk;
+      task.riskConfidence = result.confidence;
+      await task.save();
+      
+      return res.status(200).json({
+        risk: result.risk,
+        confidence: result.confidence,
+        taskId: task._id
+      });
+    } catch (error) {
+      console.error('Error predicting risk:', error);
+      return res.status(500).json({ message: "Error predicting risk", error: error.message });
+    }
+  }
+  
+  // Si des détails sont fournis directement, faire une prédiction sans sauvegarder
+  if (!taskDetails) {
+    return res.status(400).json({ message: "Task details are required." });
+  }
+  
+  try {
+    const result = await predictTaskRisk(taskDetails);
+    if (!result) {
+      return res.status(400).json({ message: "Unable to get a prediction from the model." });
+    }
+    
+    return res.status(200).json({
+      risk: result.risk,
+      confidence: result.confidence
+    });
+  } catch (error) {
+    console.error('Error predicting risk:', error);
+    return res.status(500).json({ message: "Error predicting risk", error: error.message });
+  }
+};
 module.exports = {
   getAllTasks,
   getTaskById,
@@ -424,4 +576,6 @@ module.exports = {
   getTaskWithProgress,
   trackGitHubCommits,
   fetchAllCommits,
+  predictTaskRisk,
+  predictRisk,
 };

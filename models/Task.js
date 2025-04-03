@@ -57,7 +57,20 @@ const taskSchema = new mongoose.Schema({
     missedDeadlines: {
       type: Number,
       default: 0, // Tracks how many times a deadline was missed
-    }
+    } ,
+    taskDetails: {
+      type: String,
+      required: false, // Optionnel au début, mais recommandé
+    },
+    risk: {
+      type: String,
+      enum: ['High Risk', 'Low Risk', 'Unknown'],
+      default: 'Unknown',
+    },
+    riskConfidence: {
+      type: Number,
+      default: 0, // Score de confiance entre 0-1
+    }  
 });
 
 module.exports = mongoose.model('Task', taskSchema);
