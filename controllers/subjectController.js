@@ -59,14 +59,16 @@ const deleteSubject = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Modifiez la fonction assignSubjectsToGroups
 async function assignSubjectsToGroups(req, res) {
   try {
     const threshold = parseFloat(req.query.threshold) || 0.15;
     const maxGroups = parseInt(req.query.maxGroups) || 3;
+    const autoAssign = req.query.auto === 'true';
 
     const [groups, subjects, users] = await Promise.all([
       Group.find().populate('members', 'name skills'),
-      Subject.find(),
+      Subject.find().populate('assignedGroups'),
       User.find()
     ]);
 
@@ -78,27 +80,40 @@ async function assignSubjectsToGroups(req, res) {
       maxGroups
     );
 
-    // Retournez une structure cohérente
+    // Attendre la mise à jour complète avant de répondre
+    if (autoAssign && matches.length > 0) {
+      await Promise.all(matches.map(async (match) => {
+        await Subject.findByIdAndUpdate(
+          match.subjectId,
+          { $addToSet: { assignedGroups: match.groupId } },
+          { new: true }
+        );
+      }));
+    }
+
     res.status(200).json({
       success: true,
-      message,
-      assignments: matches || [], // Garantir un tableau vide
+      message: autoAssign 
+        ? `${matches.length} assignments saved successfully` 
+        : `${matches.length} potential matches found`,
+      assignments: matches,
       stats: {
         totalGroups: groups.length,
         totalSubjects: subjects.length,
         totalUsers: users.length,
         threshold,
         maxGroups
-      }
+      },
+      // Ajout d'un timestamp pour le frontend
+      timestamp: new Date().getTime()
     });
 
   } catch (error) {
     console.error('Error in assignSubjectsToGroups:', error);
     res.status(500).json({ 
       success: false,
-      message: "Erreur du système d'affectation",
-      error: error.message,
-      assignments: [] // Garantir un tableau vide
+      message: "Assignment error - please try again",
+      error: error.message
     });
   }
 }

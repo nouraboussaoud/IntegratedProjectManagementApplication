@@ -20,6 +20,10 @@ assignedGroups: [{
   type: mongoose.Schema.Types.ObjectId,
   ref: 'Group'
 }],
+
 createdAt: { type: Date, default: Date.now },
+});
+subjectSchema.pre('find', function() {
+  this.populate('assignedGroups', 'name members');
 });
 module.exports = mongoose.model("Subject", subjectSchema);
