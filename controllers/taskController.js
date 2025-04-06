@@ -417,6 +417,8 @@ const trackGitHubCommits = async (req, res) => {
     }
 
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    console.log("GITHUB_TOKEN:", GITHUB_TOKEN);
+    
     const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/commits?sha=${branchName}`;
 
     // Check if GitHub API rate limit is exceeded
