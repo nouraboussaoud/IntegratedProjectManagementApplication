@@ -1,42 +1,51 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
 const UserSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    role: {
-        type: String,
-        enum: ["admin", "tutor", "student"],
-        default: "student"
-    },
-    isActive: {
-        type: Boolean,
-        default: true
+  name: {
+    type: String,
+    required: true
+  },
+  email: { 
+    type: String, 
+    unique: true, 
+    sparse: true 
+  },
+  password: {
+    type: String,
+    required: function() {
+      return this.provider === 'local';
     }
+  },
+  provider: {
+    type: String,
+    enum: ['local', 'github', 'google'],
+    default: 'local'
+  },
+  githubId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  role: {
+    type: String,
+    enum: ["admin", "tutor", "student"],
+    default: "student"
+  },
+  isActive: {
+    type: Boolean,
+    default: false
+  },
+  profilePic: {
+    type: String
+  },
+  verificationToken: {
+    type: String
+  },
+  isBanned: {
+    type: Boolean,
+    default: false
+  }
 }, { timestamps: true });
 
-// Hash password before saving
-UserSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-});
-
-// Compare passwords for login
-UserSchema.methods.matchPassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);
-};
-
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model("User", UserSchema);
