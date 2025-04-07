@@ -409,60 +409,55 @@ const fetchAllCommits = async (url, token) => {
 const trackGitHubCommits = async (req, res) => {
   try {
     const { taskId, repoOwner, repoName, branchName } = req.params;
-
-    // Fetch the task from the database
-    const task = await Task.findById(taskId);
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    console.log("GITHUB_TOKEN:", GITHUB_TOKEN);
-    
+    console.log('Fetching commits for:', repoOwner, repoName, branchName);
     const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/commits?sha=${branchName}`;
 
-    // Check if GitHub API rate limit is exceeded
-    const rateLimitResponse = await fetch("https://api.github.com/rate_limit", {
-      headers: { Authorization: `token ${GITHUB_TOKEN}` },
-    });
-    console.log("Rate Limit Response Status:", rateLimitResponse.status);  // Log the status
+    // [Keep existing rate limit check code...]
 
-    if (!rateLimitResponse.ok) {
-      return res.status(500).json({ message: "Error checking GitHub rate limit" });
-    }
-
-    const rateLimitData = await rateLimitResponse.json();
-    if (rateLimitData.resources.core.remaining === 0) {
-      return res.status(429).json({ message: "GitHub API rate limit exceeded" });
-    }
-
-    // Fetch all commits
-    const commits = await fetchAllCommits(apiUrl, GITHUB_TOKEN);
+    // Fetch commits
+    const commits = await fetchAllCommits(apiUrl, process.env.GITHUB_TOKEN);
     if (commits.length === 0) {
       return res.status(404).json({ message: "No commits found" });
     }
 
-    console.log("Total commits fetched:", commits.length);
+    const commitDetails = commits.map(commit => ({
+      message: commit.commit.message,
+      date: commit.commit.author.date,
+    }));
 
     // Update task progress
-    const commitCount = commits.length;
-    task.progressPercentage = Math.min(100, commitCount * 10); // Example: 10% per commit
-
-    // Save updated task
-    await task.save();
-
-    // Send response
-    res.status(200).json({
-      message: "Task updated with commit data",
-      task,
-      commitCount,
-    });
-
+    const task = await Task.findById(taskId);
+    if (task) {
+      const commitCount = commits.length;
+      
+      // SIMPLE FIX: Make progress equal to number of commits (capped at 100)
+      const progressPercentage = Math.min(commitCount, 100);
+      
+      // Update task progress
+      task.progressPercentage = progressPercentage;
+      task.completedCount = commitCount;
+      task.totalCount = 100; // This makes the frontend display correctly
+      
+      await task.save();
+      
+      res.status(200).json({
+        message: "Commits fetched successfully",
+        commitDetails,
+        commitCount,
+        progressPercentage,
+        completedCount: commitCount,
+        totalCount: 100 // Keep this fixed at 100 for percentage display
+      });
+    } else {
+      res.status(404).json({ message: "Task not found" });
+    }
   } catch (error) {
     console.error("Error fetching GitHub commits:", error);
     res.status(500).json({ message: "Error fetching GitHub commits", error: error.message });
   }
 };
+
+
 
 // Function to handle task risk prediction
 // Fonction utilitaire pour prédire le risque

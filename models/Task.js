@@ -70,7 +70,8 @@ const taskSchema = new mongoose.Schema({
     riskConfidence: {
       type: Number,
       default: 0, // Score de confiance entre 0-1
-    }  
+    } 
+     
 });
 
 module.exports = mongoose.model('Task', taskSchema);
