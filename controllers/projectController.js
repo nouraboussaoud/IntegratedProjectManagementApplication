@@ -80,13 +80,26 @@ const getProjectInProgressTasks = async (req, res) => {
 
 const createProject = async (req, res) => {
   try {
-    const project = new Project(req.body);
+    // Ensure the user who creates the project is authenticated
+    const userId = req.userId;  // User info from JWT token
+    
+    const { name, description, group, tasks } = req.body;
+
+    const project = new Project({
+      name,
+      description,
+      group,
+      tasks,
+      createdBy: userId,  // Assign user who created the project
+    });
+
     await project.save();
     res.status(201).json(project);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
+
 
 const updateProject = async (req, res) => {
     try {

@@ -117,9 +117,9 @@ const getAllUsers = async (req, res) => {
 
         // Generate token
         const token = jwt.sign(
-            { userId: user._id, role: user.role }, 
-            secretKey, 
-            { expiresIn: '1h' }
+            { userId: user._id, role: user.role, accessToken: user.accessToken }, // Include accessToken
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
         );
 
         console.log('Token generated successfully'); // Debugging log

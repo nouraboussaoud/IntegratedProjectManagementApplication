@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-
 const taskSchema = new mongoose.Schema({
     title: {
       type: String,
@@ -33,8 +32,32 @@ const taskSchema = new mongoose.Schema({
       enum: ['low', 'medium', 'high', 'urgent'],
       default: 'medium',
     },
-  });
-  
-  module.exports = mongoose.model('Task', taskSchema);
 
-  
+    // 🔹 Progress Tracking Fields
+    progressPercentage: {
+      type: Number,
+      default: 0, // Starts at 0%
+    },
+    deadline: {
+      type: Date,
+      required: false, // Ensure tasks have a deadline
+    },
+    completedOn: {
+      type: Date, // Captures the actual completion date
+      default: null,
+    },
+    timeSpent: {
+      type: Number,
+      default: 0, // Tracks time spent in hours
+    },
+    revisions: {
+      type: Number,
+      default: 0, // Number of times the task was revised
+    },
+    missedDeadlines: {
+      type: Number,
+      default: 0, // Tracks how many times a deadline was missed
+    }
+});
+
+module.exports = mongoose.model('Task', taskSchema);
