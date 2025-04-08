@@ -403,8 +403,10 @@ const getAvailableSkills = (req, res) => {
         "docker", "git", "aws", "azure", "machine learning", "data science",
         "cybersecurity", "typescript", "php", "ruby", "swift", "kotlin",
         "django", "flask", "spring", "laravel", "tensorflow", "pytorch", 
-        "nlp", "computer vision" , "redux" , "graphql" , "flutter" , "react native" , "jest" , "css" , "sql" , "airflow" , "pyspark"
-      ];
+        "nlp", "computer vision" , "redux" , "graphql" , "flutter" , "react native" , "jest" , "css" , "sql" , "airflow" , "pyspark" ,"kubernetes", "helm", "istio", "serverless", "terraform", 
+  "prometheus", "grafana", "argoCD", "vault", "grpc", 
+  "keda", "kubeflow", "jenkins", "github actions", "opa"
+];
       res.status(200).json(skills);
     } catch (error) {
       res.status(500).json({ message: "Erreur serveur" });

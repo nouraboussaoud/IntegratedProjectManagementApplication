@@ -130,10 +130,16 @@ async function assignSubjectsToGroups(req, res) {
     // Attendre la mise à jour complète avant de répondre
     if (autoAssign && matches.length > 0) {
       await Promise.all(matches.map(async (match) => {
+        // Mise à jour du sujet
         await Subject.findByIdAndUpdate(
           match.subjectId,
-          { $addToSet: { assignedGroups: match.groupId } },
-          { new: true }
+          { $addToSet: { assignedGroups: match.groupId } }
+        );
+        
+        // Mise à jour du groupe
+        await Group.findByIdAndUpdate(
+          match.groupId,
+          { $addToSet: { assignedSubjects: match.subjectId } }
         );
       }));
     }

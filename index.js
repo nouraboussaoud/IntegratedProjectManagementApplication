@@ -10,6 +10,7 @@ require("dotenv").config(); // Load environment variables
 const userRoutes = require("./routes/userRoutes");
 const groupRoutes = require("./routes/groupRoutes");
 const subjectRoutes = require("./routes/subjectRoutes");
+const projectRoutes = require("./routes/projectRoutes");
 const passport = require('passport');
 require("./middleware/passport")(); // Ensure passport is initialized
 const path = require("path");
@@ -51,6 +52,7 @@ app.use(
 app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/subject", subjectRoutes);
+app.use("/api/projects",projectRoutes);
 // Start server
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

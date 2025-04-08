@@ -5,19 +5,23 @@ const groupSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true, // Ceci garantit l'unicité
-    trim: true, // Supprime les espaces inutiles
+    unique: true,
+    trim: true,
   },
-    members: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User', // Assuming you have a User model
-    }],
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  });
-  
-  module.exports= mongoose.model('Group', groupSchema);
+  members: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  assignedSubjects: [{  // Ajoutez ce nouveau champ
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject',
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+module.exports = mongoose.model('Group', groupSchema);
 
   

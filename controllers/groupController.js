@@ -73,13 +73,18 @@ const sendInvitationEmail = async (userEmail, groupName, userId) => {
 
 
 
-
 const getAllGroups = async (req, res) => {
   try {
-    const groups = await Group.find().populate({
-      path: 'members',
-      select: 'name skills' // Spécifiez explicitement les champs à inclure
-    });
+    const groups = await Group.find()
+      .populate({
+        path: 'members',
+        select: 'name skills'
+      })
+      .populate({
+        path: 'assignedSubjects',
+        select: 'title description'
+      });
+    
     res.json(groups);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -286,6 +291,21 @@ const checkGroupName = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Dans votre contrôleur de groupes (backend)
+// Dans controllers/groupController.js
+const getAllGroupsForDropdown = async (req, res) => {
+  try {
+    const groups = await Group.find()
+      .select('name _id assignedSubjects') // Inclure les sujets assignés
+      .populate({
+        path: 'assignedSubjects',
+        select: 'title _id' // Seulement le titre et l'ID
+      });
+    res.json(groups);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   getAllGroups,
   getGroupById,
@@ -297,5 +317,5 @@ module.exports = {
   addMember,
   deleteMember, 
   getMyGroups,
-  rejectInvitation, checkGroupName
+  rejectInvitation, checkGroupName,getAllGroupsForDropdown
 };
