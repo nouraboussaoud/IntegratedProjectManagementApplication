@@ -103,13 +103,11 @@ const getRepositories = async (req, res) => {
   }
 };
 
-// ... (existing imports and methods)
-
 // Submit Evaluation
 const submitEvaluation = async (req, res) => {
     try {
       const { deliverableId } = req.params;
-      const { score, checklist, rubricScores, notes } = req.body;
+      const { score,  notes } = req.body;
   
       const deliverable = await Deliverable.findById(deliverableId);
       if (!deliverable) {
@@ -120,10 +118,6 @@ const submitEvaluation = async (req, res) => {
       deliverable.evaluation = {
         score,
         notes,
-        checklist,
-        rubricScores,
-        evaluated_by: req.user.id,
-        evaluated_at: new Date()
       };
       deliverable.status = 'evaluated';
   

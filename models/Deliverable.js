@@ -1,27 +1,13 @@
 const mongoose = require('mongoose');
 
 const evaluationSchema = new mongoose.Schema({
-  score: {
+  evaluationScore: {
     type: Number,
     min: 0,
     max: 100
   },
   notes: String,
-  checklist: {
-    requirement1: Boolean,
-    requirement2: Boolean,
-    requirement3: Boolean
-  },
-  rubricScores: {
-    // Dynamic structure for rubric scores
-  },
-  evaluated_by: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  evaluated_at: {
-    type: Date
-  }
+  
 });
 
 const deliverableSchema = new mongoose.Schema(
