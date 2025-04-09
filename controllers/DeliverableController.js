@@ -7,6 +7,7 @@ const mammoth = require('mammoth');
 
 // Configure Cloudinary
 // Configure Cloudinary
+const stream = require('stream');
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -70,15 +71,47 @@ const getFile = async (req, res) => {
       return res.status(404).json({ message: "Deliverable not found" });
     }
 
-    if (!deliverable.file?.url) {
+    if (!deliverable.file?.public_id) {
       return res.status(404).json({ message: "No file associated with this deliverable" });
     }
 
-    // Redirect to Cloudinary URL
-    res.redirect(deliverable.file.url);
+    // Option 1: Redirect to Cloudinary URL (simplest and most efficient)
+    const pdfUrl = cloudinary.url(deliverable.file.public_id, {
+      secure: true,
+      resource_type: 'raw',
+      sign_url: true,
+      expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
+      flags: 'attachment',
+      filename_override: deliverable.file.originalname
+    });
+
+    return res.redirect(pdfUrl);
+
+    /* 
+    // Option 2: Stream the file through your server (if you need processing)
+    const pdfStream = cloudinary.api.resource(deliverable.file.public_id, {
+      resource_type: 'raw',
+      type: 'upload',
+      stream: true
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${deliverable.file.originalname}"`);
+    
+    pdfStream.on('error', (err) => {
+      console.error('Stream error:', err);
+      res.status(500).end();
+    });
+
+    pdfStream.pipe(res);
+    */
+
   } catch (error) {
     console.error("Error fetching file:", error);
-    res.status(500).json({ message: "Error fetching file" });
+    res.status(500).json({ 
+      message: "Error fetching file",
+      error: error.message 
+    });
   }
 };
 
