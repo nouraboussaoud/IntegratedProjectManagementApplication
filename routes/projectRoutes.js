@@ -1,35 +1,34 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const {
+  
+    createProject,
     getAllProjects,
     getProjectById,
-    getProjectByName,
-    getProjectByGroup,
-    getProjectTasks,
-    getProjectFinishedTasks,
-    getProjectPendingTasks,
-    getProjectInProgressTasks,
-    createProject,
     updateProject,
     deleteProject,
-    addTask,
-    assignProjectToGroup,
+    calculateProjectProgress,
+    getProjectByName,
+
+    
 } = require("../controllers/projectController");
 const { verifyToken } = require("../controllers/userController");
 const router = express.Router();
 
-router.get("/getAllProjects",verifyToken ,getAllProjects);
-router.get("/getProjectById/:id" ,verifyToken , getProjectById);
-router.get("/getProjectByName/:name",verifyToken , getProjectByName);
-router.get("/getProjectByGroup/:id",verifyToken , getProjectByGroup);
-router.get("/getProjectTasks/:id",verifyToken , getProjectTasks);
-router.get("/getProjectFinishedTasks/:id",verifyToken , getProjectFinishedTasks);
-router.get("/getProjectPendingTasks/:id",verifyToken , getProjectPendingTasks);
-router.get("/getProjectInProgressTasks/:id",verifyToken , getProjectInProgressTasks);
 router.post("/createProject",verifyToken , createProject);
-router.put("/updateProject/:id",verifyToken , updateProject);
-router.delete("/deleteProject/:id",verifyToken , deleteProject);
-router.put("/addTask/:id",verifyToken , addTask);
-router.put("/assignProjectToGroup/:id",verifyToken , assignProjectToGroup);
+// Get all projects
+
+router.get("/projects", getAllProjects);
+
+// Get project by ID
+router.get("/projects/:name", getProjectByName);
+// Update project by ID
+router.put("/projects/:id", updateProject);
+router.get("/projects/:id", getProjectById);
+
+// Delete project by ID
+router.delete("/projects/:id", deleteProject);
+router.get("/:id/progress", calculateProjectProgress);
+
 
 module.exports = router;

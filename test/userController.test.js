@@ -7,21 +7,27 @@ nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const User = require("../models/User"); // Adjust path if needed
-const { app, server } = require("../index"); // Adjust the path if necessary
+const User = require("../models/User");
+const { app, startServer, connectDB } = require("../index");
 
 let mongoServer;
+let server;
 jest.setTimeout(30000); // Set timeout to 30 seconds globally
 
 beforeAll(async () => {
   // Start an in-memory MongoDB server
   mongoServer = await MongoMemoryServer.create();
+  
+  // Disconnect if there's an existing connection
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
 
   // Connect to the in-memory database
-  await mongoose.connect(mongoServer.getUri(), {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  await connectDB(mongoServer.getUri());
+  
+  // Start the Express server for testing
+  server = startServer(0); // Using port 0 lets the OS assign an available port
 });
 
 afterEach(async () => {
@@ -48,7 +54,7 @@ describe("User Registration", () => {
     };
 
     const response = await request(app)
-      .post("/api/users/register") // Adjust the endpoint if necessary
+      .post("/api/users/register")
       .send(newUser)
       .expect(201);
 

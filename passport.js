@@ -33,7 +33,8 @@ const crypto = require('crypto');
   
               await user.save();
         }
-
+    
+    
         // Générer un token JWT
         const token = jwt.sign(
             { userId: user._id, role: user.role },

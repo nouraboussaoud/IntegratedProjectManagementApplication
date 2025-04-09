@@ -77,3 +77,5 @@ public/
 # Build output
 dist/
 build/.
+
+build/.node_modules/
