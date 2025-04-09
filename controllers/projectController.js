@@ -6,7 +6,16 @@ const mongoose = require('mongoose');
 // Get all projects
 const getAllProjects = async (req, res) => {
   try {
-    const projects = await Project.find(); // Get all projects
+    const projects = await Project.find()
+      .populate({
+        path: 'group',
+        populate: {
+          path: 'assignedSubjects',
+          select: 'title _id'
+        }
+      })
+      .populate('createdBy', 'name email');
+    
     res.status(200).json(projects);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -45,21 +54,29 @@ const getProjectByName = async (req, res) => {
 
 const createProject = async (req, res) => {
   try {
-    // Ensure the user who creates the project is authenticated
-    const userId = req.userId;  // User info from JWT token
-    
-    const { name, description, group, tasks } = req.body;
+    const userId = req.userId;
+    const { name, description, group } = req.body;
 
     const project = new Project({
       name,
       description,
       group,
-      tasks,
-      createdBy: userId,  // Assign user who created the project
+      createdBy: userId,
     });
 
     await project.save();
-    res.status(201).json(project);
+    
+    // Ajoutez ce populate avant de renvoyer la réponse
+    const populatedProject = await Project.findById(project._id)
+      .populate({
+        path: 'group',
+        populate: {
+          path: 'assignedSubjects',
+          select: 'title _id'
+        }
+      });
+
+    res.status(201).json(populatedProject);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -67,21 +84,23 @@ const createProject = async (req, res) => {
 // Update project by ID
 const updateProject = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id); // Find the project by ID
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true } // Pour retourner le document modifié
+    )
+    .populate({
+      path: 'group',
+      populate: {
+        path: 'assignedSubjects',
+        select: 'title _id'
+      }
+    });
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // Update the project fields
-    const { name, description, group, tasks } = req.body;
-
-    if (name) project.name = name;
-    if (description) project.description = description;
-    if (group) project.group = group;
-    if (tasks) project.tasks = tasks;
-
-    await project.save(); // Save the updated project
     res.status(200).json(project);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -144,6 +163,10 @@ const calculateProjectProgress = async (req, res) => {
   }
 };
 
+// Dans votre controller projects.js
+
+
+// Dans vos routes
 
 
 module.exports = {
@@ -154,8 +177,6 @@ module.exports = {
   updateProject,
   deleteProject,
   calculateProjectProgress,
-  getProjectByName,
+  getProjectByName
  
 };
-
-

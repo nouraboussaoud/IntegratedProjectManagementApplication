@@ -10,6 +10,9 @@ const {
     deleteGroup,
     addMember,
     deleteMember,
+    getMyGroups,
+    rejectInvitation,
+    checkGroupName,getAllGroupsForDropdown
 } = require("../controllers/groupController");
 const { verifyToken } = require("../controllers/userController");
 const router = express.Router();
@@ -23,6 +26,11 @@ router.put("/updateGroup/:id", verifyToken,updateGroup);
 router.delete("/deleteGroup/:id", verifyToken ,  deleteGroup);
 router.put("/addMember/:email", verifyToken , addMember);
 router.put("/deleteMember/:email",verifyToken , deleteMember);
+router.put('/:groupId/reject-invitation',verifyToken , rejectInvitation);
+router.get("/my-groups", verifyToken, getMyGroups);
+router.get("/check-name", verifyToken,  checkGroupName);
+
+router.get("/dropdown", verifyToken,  getAllGroupsForDropdown);
 
 
 module.exports = router;
