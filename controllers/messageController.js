@@ -2,7 +2,38 @@ const Message = require("../models/Message");
 const User = require("../models/User");
 const mongoose = require("mongoose");
 
-
+// Get unread message counts grouped by sender
+const getUnreadCountsBySender = async (req, res) => {
+  try {
+    const userId = req.userId;
+    
+    // Aggregate to count unread messages grouped by sender
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          receiver: new mongoose.Types.ObjectId(userId),
+          isRead: false
+        }
+      },
+      {
+        $group: {
+          _id: "$sender",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const countsObject = unreadCounts.reduce((acc, item) => {
+      acc[item._id.toString()] = item.count;
+      return acc;
+    }, {});
+    
+    res.json({ counts: countsObject });
+  } catch (error) {
+    console.error("Error counting unread messages by sender:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 const getAllConversations = async (req, res) => {
   try {
     const userId = req.userId;
@@ -70,30 +101,30 @@ const sendMessage = async (req, res) => {
   try {
     const { receiverId, content } = req.body;
     const senderId = req.userId; // From verifyToken middleware
-    
+
     console.log("Attempting to send message:");
     console.log("Sender ID:", senderId);
     console.log("Receiver ID:", receiverId);
     console.log("Content:", content);
-    
+
     // Check if receiver exists
     const receiver = await User.findById(receiverId);
     if (!receiver) {
       console.log(`Receiver with ID ${receiverId} not found in database`);
       return res.status(404).json({ message: "Receiver not found" });
     }
-    
+
     // Check if sender exists
     const sender = await User.findById(senderId);
     if (!sender) {
       return res.status(404).json({ message: "Sender not found" });
     }
-    
+
     // Check if receiver is banned
     if (receiver.isBanned) {
       return res.status(403).json({ message: "Cannot send message to banned user" });
     }
-    
+
     // Create and save the message
     const message = new Message({
       sender: senderId,
@@ -106,17 +137,30 @@ const sendMessage = async (req, res) => {
         mimetype: file.mimetype
       })) : []
     });
-    
+
     await message.save();
-    
+
     // Populate sender and receiver info for the socket event
     const populatedMessage = await Message.findById(message._id)
       .populate('sender', 'name email profilePic')
       .populate('receiver', 'name email profilePic');
+
+    // Get the io instance
+    const io = req.app.get('io');
     
-    // Emit socket event (this will be handled in socketServer.js)
-    req.app.get('io').to(receiverId.toString()).emit('new_message', populatedMessage);
+    // Emit to receiver's room for notification
+    io.to(receiverId.toString()).emit('new_message', populatedMessage);
     
+    // Also emit to sender's room for multi-device sync
+    io.to(senderId.toString()).emit('new_message', populatedMessage);
+    
+    // Broadcast to anyone who might be viewing the conversation
+    io.emit('message_sent', {
+      senderId,
+      receiverId,
+      messageId: message._id
+    });
+
     res.status(201).json({ 
       message: "Message sent successfully", 
       data: populatedMessage 
@@ -374,5 +418,6 @@ module.exports = {
   getMessageContacts,
   userTyping,
   getOnlineUsers,
-  getAllConversations
+  getAllConversations,
+  getUnreadCountsBySender  
 };

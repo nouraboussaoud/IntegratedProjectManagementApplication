@@ -6,9 +6,14 @@ const cors = require("cors");
 const { initializeSocketServer } = require("./socket/socketServer");
 const jwt = require("jsonwebtoken");
 const fetch = require("node-fetch");
+const axios = require('axios');
+
 const User = require("./models/User");
 const userRoutes = require("./routes/userRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const progressRoutes = require("./routes/progressRoutes"); // Add progressRoutes
+const taskRoutes = require("./routes/taskRoutes");
+const projectRoutes = require("./routes/projectRoutes");
 const passport = require('passport');
 require("./middleware/passport")();
 const path = require("path");
@@ -46,26 +51,62 @@ app.use(passport.session());
 
 // Register Routes
 app.use("/api/users", userRoutes);
+app.use('/api/messages', messageRoutes);
+app.use("/api/progress", progressRoutes); // Add progress tracking routes
+app.use("/api/tasks", taskRoutes);
+app.use("/api/projects",projectRoutes);
 
-// Start server
-const PORT = process.env.PORT || 5001;
-const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-app.use(passport.initialize());
-app.use(passport.session());
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/' }),
-  (req, res) => {
-    // Générer un token JWT pour l'utilisateur
-    const token = jwt.sign(
-        { userId: req.user._id, role: req.user.role },
-        process.env.JWT_SECRET_KEY,
-        { expiresIn: '1h' }
-    );
-
-    // Rediriger vers le frontend avec le token et les informations de l'utilisateur
-    res.redirect(`http://localhost:3000/student-dashboard`);
+// Create a function to connect to the database
+const connectDB = async (connectionString = process.env.MONGO_URI) => {
+  try {
+    await mongoose.connect(connectionString, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("MongoDB Connected...");
+    return true;
+  } catch (err) {
+    console.error("Database connection error:", err);
+    return false;
   }
-);
+};
+app.post('/predict', async (req, res) => {
+  try {
+    const { completionPercentage } = req.body;
+
+    if (!completionPercentage) {
+      return res.status(400).json({ error: "completionPercentage is required" });
+    }
+
+    // Make a request to your Flask API
+    const response = await axios.post('http://localhost:5000/predict', {
+      completionPercentage: completionPercentage,
+    });
+
+    const predictedDelay = response.data.predictedDelay;
+    res.status(200).json({ predictedDelay });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Error fetching prediction');
+  }
+});
+
+// Create a function to start the server
+const startServer = (port = process.env.PORT || 5001) => {
+  const server = app.listen(port, () => console.log(`Server running on port ${port}`));
+
+  // Initialize Socket.IO
+  const io = initializeSocketServer(server);
+  app.set('io', io);
+
+  return server;
+};
+
+// Only connect to the database and start the server if this file is run directly
+let server;
+if (require.main === module) {
+  connectDB();
+  server = startServer();
+}
 
 module.exports = { app, server, connectDB, startServer };

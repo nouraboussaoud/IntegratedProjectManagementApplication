@@ -11,10 +11,10 @@ const {
   deleteMessage,
   getMessageContacts,
   getOnlineUsers,
-  getAllConversations
+  getAllConversations,
+  getUnreadCountsBySender
 } = require("../controllers/messageController");
 const { upload } = require("../uploadimage");
-const { authenticateUser } = require("../middleware/authMiddleware");
 
 
 // All routes are protected with verifyToken
@@ -28,6 +28,7 @@ router.delete('/delete/:messageId', verifyToken, deleteMessage);
 router.get('/contacts', verifyToken, getMessageContacts);
 router.get('/online-users', verifyToken, getOnlineUsers);
 router.get("/conversations", verifyToken, getAllConversations);
+router.get('/unread-counts-by-sender', verifyToken, getUnreadCountsBySender);
 
 
 module.exports = router;
