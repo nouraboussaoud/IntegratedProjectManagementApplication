@@ -1,41 +1,84 @@
 const axios = require("axios");
 const Deliverable = require('../models/Deliverable');
-const fs = require("fs");
-const path = require("path");
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
-// Create Deliverable
+// Configure Cloudinary
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Modified createDeliverable
 const createDeliverable = async (req, res) => {
   try {
-    // Ensure the user is authenticated
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Unauthorized: Invalid token" });
     }
 
-    // Extract the required fields from the request body
     const { title, description, github_commit_url } = req.body;
-    const file = req.file; // Ensure the file is received as part of the form-data
+    const file = req.file;
 
-    // Validate the required fields
     if (!title || !description || !file || !github_commit_url) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Create a new deliverable
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'deliverables',
+      resource_type: 'auto'
+    });
+
     const newDeliverable = new Deliverable({
       title,
-      student_id: req.user.id, // Automatically assign the student_id based on logged-in user
+      student_id: req.user.id,
       description,
-      file: file.path, // Save the file path
+      file: {
+        url: result.secure_url,
+        public_id: result.public_id
+      },
       github_commit_url,
-      status: 'pending', // Initial status is pending
+      status: 'pending',
     });
 
     await newDeliverable.save();
 
-    res.status(201).json({ message: "Deliverable created successfully", deliverable: newDeliverable });
+    // Clean up the temporary file (now with proper fs import)
+    fs.unlinkSync(file.path);
+
+    res.status(201).json({ 
+      message: "Deliverable created successfully", 
+      deliverable: newDeliverable 
+    });
   } catch (error) {
     console.error("Error creating deliverable:", error);
     res.status(500).json({ message: "Error creating deliverable" });
+  }
+};
+
+// Simplified getFile (now just redirects to Cloudinary URL)
+const getFile = async (req, res) => {
+  try {
+    const { deliverableId } = req.params;
+    const deliverable = await Deliverable.findById(deliverableId);
+    
+    if (!deliverable) {
+      return res.status(404).json({ message: "Deliverable not found" });
+    }
+
+    if (!deliverable.file?.url) {
+      return res.status(404).json({ message: "No file associated with this deliverable" });
+    }
+
+    // Redirect to Cloudinary URL
+    res.redirect(deliverable.file.url);
+  } catch (error) {
+    console.error("Error fetching file:", error);
+    res.status(500).json({ message: "Error fetching file" });
   }
 };
 
@@ -103,13 +146,11 @@ const getRepositories = async (req, res) => {
   }
 };
 
-// ... (existing imports and methods)
-
 // Submit Evaluation
 const submitEvaluation = async (req, res) => {
     try {
       const { deliverableId } = req.params;
-      const { score, checklist, rubricScores, notes } = req.body;
+      const { score,  notes } = req.body;
   
       const deliverable = await Deliverable.findById(deliverableId);
       if (!deliverable) {
@@ -120,10 +161,6 @@ const submitEvaluation = async (req, res) => {
       deliverable.evaluation = {
         score,
         notes,
-        checklist,
-        rubricScores,
-        evaluated_by: req.user.id,
-        evaluated_at: new Date()
       };
       deliverable.status = 'evaluated';
   
@@ -157,14 +194,14 @@ const submitEvaluation = async (req, res) => {
       res.status(500).json({ message: "Error fetching evaluation" });
     }
   };
-  
-  // ... (existing exports)
-  module.exports = {
-    createDeliverable,
-    getDeliverablesHistory,
-    getCommits,
-    getBranches,
-    getRepositories,
-    submitEvaluation,
-    getEvaluation
-  };
+
+module.exports = {
+  createDeliverable,
+  getDeliverablesHistory,
+  getCommits,
+  getBranches,
+  getRepositories,
+  submitEvaluation,
+  getEvaluation,
+  getFile
+};

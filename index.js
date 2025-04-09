@@ -7,6 +7,7 @@ const { initializeSocketServer } = require("./socket/socketServer");
 const jwt = require("jsonwebtoken");
 const fetch = require("node-fetch");
 const axios = require('axios');
+const aiDetectionRoutes = require('./routes/aiDetection.routes');
 
 const User = require("./models/User");
 const userRoutes = require("./routes/userRoutes");
@@ -30,7 +31,8 @@ const app = express();
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",
@@ -49,6 +51,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/aiDetection", aiDetectionRoutes); // Updated mount point to match frontend expectation
+app.use("/api/plagiarism", aiDetectionRoutes); // Add plagiarism route mounting
 
 // Prediction API endpoint
 app.post('/predict', async (req, res) => {
