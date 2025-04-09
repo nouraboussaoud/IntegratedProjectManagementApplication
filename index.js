@@ -59,7 +59,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
-
+app.use("/api/groups", groupRoutes);
 // Prediction API endpoint
 app.post('/predict', async (req, res) => {
   try {
