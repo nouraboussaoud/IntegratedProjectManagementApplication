@@ -151,32 +151,46 @@ const updateTask = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
-    // Vérifier si l'ID est valide
+    // Validate ID format
     const { ObjectId } = require('mongoose').Types;
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid task ID format" });
     }
     
-    // Chercher la tâche
-    const task = await Task.findById(id);
+    // Find the task and ensure assignedTo is populated
+    const task = await Task.findById(id).populate('assignedTo');
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    // Vérifier si l'utilisateur a le droit de modifier cette tâche
-    if (task.assignedTo.toString() !== req.userId) {
-      return res.status(403).json({ message: "Unauthorized: You are not assigned to this task" });
+    // Check authorization - more defensive check
+    if (!task.assignedTo || !req.userId || task.assignedTo._id.toString() !== req.userId) {
+      return res.status(403).json({ 
+        message: "Unauthorized: You are not assigned to this task",
+        details: {
+          taskAssignedTo: task.assignedTo ? task.assignedTo._id : null,
+          currentUser: req.userId
+        }
+      });
     }
     
-    // Vérifier si les détails de la tâche ont été modifiés
+    // Check if task details changed
     const taskDetailsChanged = updates.taskDetails && updates.taskDetails !== task.taskDetails;
     
-    // Appliquer les mises à jour
+    // Apply updates (only allowed fields)
+    const allowedUpdates = ['title', 'description', 'project', 'taskDetails', 'priority', 'status'];
+    const updatesToApply = {};
+    
     Object.keys(updates).forEach((key) => {
-      task[key] = updates[key];
+      if (allowedUpdates.includes(key)) {
+        updatesToApply[key] = updates[key];
+      }
     });
     
-    // Si les détails ont changé, mettre à jour le risque
+    // Apply the filtered updates
+    Object.assign(task, updatesToApply);
+    
+    // Update risk prediction if task details changed
     if (taskDetailsChanged && updates.taskDetails) {
       try {
         const riskPrediction = await predictTaskRisk(updates.taskDetails);
@@ -185,16 +199,35 @@ const updateTask = async (req, res) => {
           task.riskConfidence = riskPrediction.confidence;
         }
       } catch (predictionError) {
-        console.error("Error updating task risk:", predictionError);
-        // Continuer malgré l'erreur de prédiction
+        console.error("Risk prediction error:", predictionError);
+        // Continue without failing the whole update
       }
     }
     
-    await task.save();
-    res.status(200).json({ message: "Task updated successfully", task });
+    // Save the updated task
+    const updatedTask = await task.save();
+    
+    res.status(200).json({ 
+      message: "Task updated successfully", 
+      task: updatedTask 
+    });
+    
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('Update task error:', error);
+    
+    // More specific error handling
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: "Validation error",
+        errors: error.errors 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: "Server error during task update",
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
