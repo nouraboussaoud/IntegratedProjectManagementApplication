@@ -169,17 +169,39 @@ const createGroup = async (req, res) => {
 
 const updateGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id);
-    if (req.body.name) {
-      group.name = req.body.name;
+    const { id } = req.params;
+    const { name } = req.body;
+
+    // Vérifier si le nouveau nom existe déjà pour un autre groupe
+    if (name) {
+      const existingGroup = await Group.findOne({ 
+        name: name,
+        _id: { $ne: id } // Exclure le groupe actuel de la recherche
+      });
+
+      if (existingGroup) {
+        return res.status(400).json({ 
+          message: "Group name already exists. Please choose a different name." 
+        });
+      }
     }
-    if (req.body.members) {
-      group.members = req.body.members;
+
+    // Mettre à jour le groupe
+    const group = await Group.findById(id);
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
     }
+
+    if (name) group.name = name;
+    if (req.body.members) group.members = req.body.members;
+
     await group.save();
     res.json(group);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error updating group:", error);
+    res.status(500).json({ 
+      message: error.message || "An error occurred while updating the group" 
+    });
   }
 };
 

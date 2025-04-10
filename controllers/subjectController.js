@@ -86,13 +86,95 @@ const createSubject = async (req, res) => {
   
 
 // Update subject
+// Update subject with validation
 const updateSubject = async (req, res) => {
   try {
-    const subject = await Subject.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!subject) return res.status(404).json({ message: "Subject not found" });
-    res.json(subject);
+    // Validation des données
+    if (!req.body.title || !req.body.description) {
+      return res.status(400).json({ 
+        message: "Title and description are required" 
+      });
+    }
+
+    if (req.body.title.length > 100) {
+      return res.status(400).json({ 
+        message: "Title must be less than 100 characters" 
+      });
+    }
+
+    if (req.body.description.length > 500) {
+      return res.status(400).json({ 
+        message: "Description must be less than 500 characters" 
+      });
+    }
+
+    // Validation des keyFeatures et aiFunctionalities
+    if (req.body.keyFeatures) {
+      for (const feature of req.body.keyFeatures) {
+        if (feature.title && !feature.description) {
+          return res.status(400).json({ 
+            message: "Description is required for all key features with a title" 
+          });
+        }
+      }
+    }
+
+    if (req.body.aiFunctionalities) {
+      for (const func of req.body.aiFunctionalities) {
+        if (func.title && !func.description) {
+          return res.status(400).json({ 
+            message: "Description is required for all AI functionalities with a title" 
+          });
+        }
+      }
+    }
+
+    // Nettoyage des données
+    const updateData = {
+      title: req.body.title.trim(),
+      description: req.body.description.trim(),
+      keyFeatures: req.body.keyFeatures
+        ?.filter(f => f.title?.trim() && f.description?.trim())
+        .map(f => ({
+          title: f.title.trim(),
+          description: f.description.trim()
+        })) || [],
+      aiFunctionalities: req.body.aiFunctionalities
+        ?.filter(f => f.title?.trim() && f.description?.trim())
+        .map(f => ({
+          title: f.title.trim(),
+          description: f.description.trim()
+        })) || [],
+      assignedGroups: req.body.assignedGroups || []
+    };
+
+    const subject = await Subject.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    res.json({
+      message: "Subject updated successfully",
+      subject
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error updating subject:", error);
+    
+    // Gestion des erreurs de duplication
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: "Subject with this title already exists" 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: error.message || "Error updating subject" 
+    });
   }
 };
 
