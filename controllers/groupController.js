@@ -259,12 +259,9 @@ const getMyGroups = async (req, res) => {
 
     // Recherche des groupes où l'utilisateur est soit membre, soit administrateur
     const groups = await Group.find({
-      $or: [
-        { members: userId },
-        { admin: userId }  // Assurez-vous de ne pas peupler l'admin
-      ]
-    })
-    .populate('members', 'name email');  // Seulement peupler les membres
+      members: userId,
+      acceptedMembers: { $ne: userId }
+    }).populate('members', 'name email');// Seulement peupler les membres
 
     res.json(groups);  // Retourner les groupes
 
@@ -328,6 +325,30 @@ const getAllGroupsForDropdown = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const acceptInvitation = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.userId;
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    // Vérifie si l'utilisateur est bien dans les membres
+    if (!group.members.includes(userId)) {
+      return res.status(400).json({ message: "User not in group members" });
+    }
+
+    // Ajoute à acceptedMembers si pas déjà présent
+    if (!group.acceptedMembers.includes(userId)) {
+      group.acceptedMembers.push(userId);
+      await group.save();
+    }
+
+    res.status(200).json({ message: "Invitation accepted", group });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   getAllGroups,
   getGroupById,
@@ -339,5 +360,5 @@ module.exports = {
   addMember,
   deleteMember, 
   getMyGroups,
-  rejectInvitation, checkGroupName,getAllGroupsForDropdown
+  rejectInvitation, checkGroupName,getAllGroupsForDropdown,acceptInvitation
 };
