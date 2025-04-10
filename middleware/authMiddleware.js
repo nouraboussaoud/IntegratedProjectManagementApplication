@@ -1,19 +1,21 @@
-const jwt = require('jsonwebtoken');
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-const authenticateToken = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', ''); // Get token from Authorization header
+dotenv.config();
+
+export const authenticateUser = async (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+
   if (!token) {
-    return res.status(401).json({ message: 'Authentication token missing' });
+    return res.status(401).json({ message: "Unauthorized: No token provided" });
   }
 
   try {
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Use the correct secret key
-    req.user = decoded;  // Attach the user data from the token to req.user
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // This should contain user ID and other claims
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    console.error("JWT Verification Error:", error.message);
+    return res.status(401).json({ message: "Unauthorized: Invalid token" });
   }
 };
-
-module.exports = { authenticateToken };
