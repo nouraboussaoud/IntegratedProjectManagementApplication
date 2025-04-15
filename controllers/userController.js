@@ -85,7 +85,7 @@ const getAllUsers = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
   };
-  //////////login
+ 
   const loginUser = async (req, res) => { 
     try {
         // Find the user
@@ -115,13 +115,13 @@ const getAllUsers = async (req, res) => {
             return res.status(401).json({ message: 'Your account is banned' });
         }
 
-        // Generate token
-        const token = jwt.sign(
-            { userId: user._id, role: user.role }, 
-            secretKey, 
-            { expiresIn: '1h' }
-        );
 
+      
+        const token = jwt.sign(
+            { userId: user._id, role: user.role, accessToken: user.accessToken }, // Include accessToken
+            secretKey, 
+            { expiresIn: '24h' }
+        );
         console.log('Token generated successfully'); // Debugging log
 
         // Send single response with all necessary data

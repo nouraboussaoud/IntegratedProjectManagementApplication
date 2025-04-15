@@ -169,17 +169,39 @@ const createGroup = async (req, res) => {
 
 const updateGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id);
-    if (req.body.name) {
-      group.name = req.body.name;
+    const { id } = req.params;
+    const { name } = req.body;
+
+    // Vérifier si le nouveau nom existe déjà pour un autre groupe
+    if (name) {
+      const existingGroup = await Group.findOne({ 
+        name: name,
+        _id: { $ne: id } // Exclure le groupe actuel de la recherche
+      });
+
+      if (existingGroup) {
+        return res.status(400).json({ 
+          message: "Group name already exists. Please choose a different name." 
+        });
+      }
     }
-    if (req.body.members) {
-      group.members = req.body.members;
+
+    // Mettre à jour le groupe
+    const group = await Group.findById(id);
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
     }
+
+    if (name) group.name = name;
+    if (req.body.members) group.members = req.body.members;
+
     await group.save();
     res.json(group);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error updating group:", error);
+    res.status(500).json({ 
+      message: error.message || "An error occurred while updating the group" 
+    });
   }
 };
 
@@ -237,12 +259,9 @@ const getMyGroups = async (req, res) => {
 
     // Recherche des groupes où l'utilisateur est soit membre, soit administrateur
     const groups = await Group.find({
-      $or: [
-        { members: userId },
-        { admin: userId }  // Assurez-vous de ne pas peupler l'admin
-      ]
-    })
-    .populate('members', 'name email');  // Seulement peupler les membres
+      members: userId,
+      acceptedMembers: { $ne: userId }
+    }).populate('members', 'name email');// Seulement peupler les membres
 
     res.json(groups);  // Retourner les groupes
 
@@ -306,6 +325,30 @@ const getAllGroupsForDropdown = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const acceptInvitation = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.userId;
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    // Vérifie si l'utilisateur est bien dans les membres
+    if (!group.members.includes(userId)) {
+      return res.status(400).json({ message: "User not in group members" });
+    }
+
+    // Ajoute à acceptedMembers si pas déjà présent
+    if (!group.acceptedMembers.includes(userId)) {
+      group.acceptedMembers.push(userId);
+      await group.save();
+    }
+
+    res.status(200).json({ message: "Invitation accepted", group });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   getAllGroups,
   getGroupById,
@@ -317,5 +360,5 @@ module.exports = {
   addMember,
   deleteMember, 
   getMyGroups,
-  rejectInvitation, checkGroupName,getAllGroupsForDropdown
+  rejectInvitation, checkGroupName,getAllGroupsForDropdown,acceptInvitation
 };

@@ -12,7 +12,7 @@ const {
     deleteMember,
     getMyGroups,
     rejectInvitation,
-    checkGroupName,getAllGroupsForDropdown
+    checkGroupName,getAllGroupsForDropdown,acceptInvitation
 } = require("../controllers/groupController");
 const { verifyToken } = require("../controllers/userController");
 const router = express.Router();
@@ -29,6 +29,7 @@ router.put("/deleteMember/:email",verifyToken , deleteMember);
 router.put('/:groupId/reject-invitation',verifyToken , rejectInvitation);
 router.get("/my-groups", verifyToken, getMyGroups);
 router.get("/check-name", verifyToken,  checkGroupName);
+router.put("/:groupId/accept-invitation", verifyToken,  acceptInvitation);
 
 router.get("/dropdown", verifyToken,  getAllGroupsForDropdown);
 
