@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
+const secretKey = process.env.JWT_SECRET_KEY || 'your_super_secret_key';
 
 // Initialize socket server
 const initializeSocketServer = (server) => {

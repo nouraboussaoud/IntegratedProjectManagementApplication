@@ -29,6 +29,7 @@ const getAllUsers = async (req, res) => {
     };
 
   
+    
   // Register (Sign Up) with file upload
   const registerUser = async (req, res) => {
       const { name, email, password, role } = req.body;
