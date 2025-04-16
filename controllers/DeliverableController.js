@@ -5,6 +5,13 @@ const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 
+// Add at the top of your DeliverableController.js
+console.log('Cloudinary environment variables in controller:', {
+  cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  apiKey: process.env.CLOUDINARY_API_KEY,
+  apiSecret: process.env.CLOUDINARY_API_SECRET
+});
+
 // Configure Cloudinary
 // Configure Cloudinary
 const stream = require('stream');

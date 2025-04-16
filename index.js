@@ -7,7 +7,8 @@ const { initializeSocketServer } = require("./socket/socketServer");
 const jwt = require("jsonwebtoken");
 const fetch = require("node-fetch");
 const axios = require('axios');
-const aiDetectionRoutes = require('./routes/aiDetection.routes');
+//const aiDetectionRoutes = require('./routes/aiDetection.routes');
+
 
 const User = require("./models/User");
 const userRoutes = require("./routes/userRoutes");
@@ -21,6 +22,20 @@ require("./middleware/passport")();
 const path = require("path");
 
 dotenv.config(); // Load environment variables
+// Initialize Cloudinary
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Verify Cloudinary configuration at startup
+console.log('Cloudinary configuration status:', {
+  cloudName: !!process.env.CLOUDINARY_CLOUD_NAME,
+  apiKey: !!process.env.CLOUDINARY_API_KEY,
+  apiSecret: !!process.env.CLOUDINARY_API_SECRET
+});
 
 require("./middleware/passport")(); // Ensure passport is initialized
 
@@ -51,8 +66,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
-app.use("/api/aiDetection", aiDetectionRoutes); // Updated mount point to match frontend expectation
-app.use("/api/plagiarism", aiDetectionRoutes); // Add plagiarism route mounting
+//app.use("/api/aiDetection", aiDetectionRoutes); // Updated mount point to match frontend expectation
+//app.use("/api/plagiarism", aiDetectionRoutes); // Add plagiarism route mounting
 
 // Prediction API endpoint
 app.post('/predict', async (req, res) => {
