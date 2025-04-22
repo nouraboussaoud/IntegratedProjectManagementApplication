@@ -272,26 +272,23 @@ const getMyGroups = async (req, res) => {
 };
 const getMyGroupss = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId;  // Utiliser req.userId extrait du token
+    console.log("User ID from token:", userId); // Vérifie que l'ID est bien extrait
 
     if (!userId) {
       return res.status(400).json({ message: "User ID missing in token" });
     }
 
-    // Recherche des groupes où l'utilisateur est membre (sans filtre sur acceptedMembers)
+    // Recherche des groupes où l'utilisateur est soit membre, soit administrateur
     const groups = await Group.find({
-      $or: [
-        { members: userId },
-        { admin: userId }
-      ]
-    })
-    .populate('members', 'name email')
-    .populate('admin', 'name email');
+      members: userId,
+    
+    }).populate('members', 'name email');// Seulement peupler les membres
 
-    res.json(groups);
+    res.json(groups);  // Retourner les groupes
 
   } catch (error) {
-    console.error("Error fetching groups:", error);
+    console.error("Error fetching groups:", error);  // Log de l'erreur
     res.status(500).json({ message: "An error occurred while fetching groups" });
   }
 };
