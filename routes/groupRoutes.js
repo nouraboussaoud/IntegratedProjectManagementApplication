@@ -11,7 +11,8 @@ const {
     addMember,
     deleteMember,
     getMyGroups,
-    rejectInvitation,
+    getMyGroupss,
+    rejectInvitation,getAttendanceByGroupId,
     checkGroupName,getAllGroupsForDropdown,acceptInvitation
 } = require("../controllers/groupController");
 const { verifyToken } = require("../controllers/userController");
@@ -28,10 +29,12 @@ router.put("/addMember/:email", verifyToken , addMember);
 router.put("/deleteMember/:email",verifyToken , deleteMember);
 router.put('/:groupId/reject-invitation',verifyToken , rejectInvitation);
 router.get("/my-groups", verifyToken, getMyGroups);
+router.get("/my-group", verifyToken, getMyGroupss);
 router.get("/check-name", verifyToken,  checkGroupName);
 router.put("/:groupId/accept-invitation", verifyToken,  acceptInvitation);
 
 router.get("/dropdown", verifyToken,  getAllGroupsForDropdown);
-
+// Group attendance
+router.get("/:id/attendance", verifyToken, getAttendanceByGroupId);
 
 module.exports = router;

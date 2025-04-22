@@ -7,7 +7,8 @@ const passport = require('passport');
 
 const mongoose = require('mongoose');
 const { log } = require("console");
-const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
+
+const secretKey =  process.env.JWT_SECRET_KEY || 'mysecretkey'; //douaa
 
 // Setup mail transporter
 const transporter = nodemailer.createTransport({
@@ -380,9 +381,9 @@ const githubCallback = (req, res, next) => {
     }
     
     // Generate JWT token
-    const secretKey = process.env.JWT_SECRET || 'mysecretkey';
+    const secretKey =  process.env.JWT_SECRET_KEY || 'mysecretkey'; //douaa  process.env.JWT_SECRET_KEY
     const token = jwt.sign(
-      { id: user._id, role: user.role }, 
+      { userId: user._id, role: user.role }, //douaa userId
       secretKey, 
       { expiresIn: '1h' }
     );

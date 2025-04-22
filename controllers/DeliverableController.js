@@ -7,7 +7,8 @@ const path = require("path");
 const createDeliverable = async (req, res) => {
   try {
     // Ensure the user is authenticated
-    if (!req.user || !req.user.id) {
+    if (!req.user || !req.user.userId)//douaa
+      {
       return res.status(401).json({ message: "Unauthorized: Invalid token" });
     }
 
@@ -23,7 +24,8 @@ const createDeliverable = async (req, res) => {
     // Create a new deliverable
     const newDeliverable = new Deliverable({
       title,
-      student_id: req.user.id, // Automatically assign the student_id based on logged-in user
+      student_id: req.user.userId,//douaa
+      // Automatically assign the student_id based on logged-in user
       description,
       file: file.path, // Save the file path
       github_commit_url,
@@ -42,7 +44,7 @@ const createDeliverable = async (req, res) => {
 // Get Deliverables History
 const getDeliverablesHistory = async (req, res) => {
   try {
-    const deliverables = await Deliverable.find({ student_id: req.user.id }).sort({ createdAt: -1 });
+    const deliverables = await Deliverable.find({ student_id:  req.user.userId}).sort({ createdAt: -1 }); //douaa  req.user.userId au lieu de req.user.id 
     res.status(200).json({ deliverables });
   } catch (error) {
     console.error("Error fetching deliverables history:", error);

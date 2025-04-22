@@ -270,6 +270,31 @@ const getMyGroups = async (req, res) => {
     res.status(500).json({ message: "An error occurred while fetching groups" });
   }
 };
+const getMyGroupss = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID missing in token" });
+    }
+
+    // Recherche des groupes où l'utilisateur est membre (sans filtre sur acceptedMembers)
+    const groups = await Group.find({
+      $or: [
+        { members: userId },
+        { admin: userId }
+      ]
+    })
+    .populate('members', 'name email')
+    .populate('admin', 'name email');
+
+    res.json(groups);
+
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    res.status(500).json({ message: "An error occurred while fetching groups" });
+  }
+};
 
 const rejectInvitation = async (req, res) => {
   try {
@@ -349,6 +374,27 @@ const acceptInvitation = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const getAttendanceByGroupId = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    
+    // Fetch attendance records for a specific group
+    const attendanceRecords = await Attendance.find({ group: groupId })
+                                              .populate('group', 'name')
+                                              .populate('presentMembers', 'name email')
+                                              .populate('absentMembers', 'name email')
+                                              .sort('-sessionDate'); // Sort by date
+    
+    if (!attendanceRecords) {
+      return res.status(404).json({ message: "No attendance records found for this group." });
+    }
+    
+    res.status(200).json(attendanceRecords);
+  } catch (error) {
+    console.error("Error fetching attendance records:", error);
+    res.status(500).json({ message: "Error fetching attendance records" });
+  }
+};
 module.exports = {
   getAllGroups,
   getGroupById,
@@ -360,5 +406,6 @@ module.exports = {
   addMember,
   deleteMember, 
   getMyGroups,
-  rejectInvitation, checkGroupName,getAllGroupsForDropdown,acceptInvitation
+  getMyGroupss,
+  rejectInvitation, checkGroupName,getAllGroupsForDropdown,acceptInvitation,getAttendanceByGroupId
 };

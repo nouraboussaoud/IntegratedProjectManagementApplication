@@ -25,6 +25,8 @@ require("./passport");
 dotenv.config(); // Load environment variables
 
 require("./middleware/passport")(); // Ensure passport is initialized
+const attendanceRoutes = require("./routes/attendanceRoutes");
+
 
 // Create Express app
 const app = express();
@@ -66,7 +68,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
-
+app.use("/api/attendance", attendanceRoutes);
 // Prediction API endpoint
 app.post('/predict', async (req, res) => {
   try {
