@@ -13,6 +13,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.13.1'  # Update to the Node.js version you're using locally
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Run unit tests
+        run: |
+          npm test  # Ensure this is the correct command to run your unit tests
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -28,7 +41,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/backendproject:latest .
-          
+
       - name: Push Docker image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/backendproject:latest
