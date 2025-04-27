@@ -4,6 +4,15 @@ const nodemailer = require("nodemailer");
 const mockSendMail = jest.fn().mockResolvedValue(true);
 nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
 
+// Mock passport-google-oauth20 to prevent real Google OAuth requests during tests
+jest.mock("passport-google-oauth20", () => ({
+  Strategy: jest.fn().mockImplementation((options, verify) => {
+    // This mock implementation immediately calls verify with a fake user
+    verify(null, { id: "fakeGoogleUser", displayName: "Fake User" });
+  }),
+}));
+
+const passport = require("passport"); // Import passport
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
