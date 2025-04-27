@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,7 +29,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  # Matching your local Node version
+          node-version: '20'
 
       - name: Install dependencies
         run: npm install
@@ -53,10 +52,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile  # Explicit Dockerfile path
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/backendproject:latest
-            ${{ secrets.DOCKER_USERNAME }}/backendproject:${{ github.sha }}
+          file: Dockerfile
+          tags: "${{ secrets.DOCKER_USERNAME }}/backendproject:latest,${{ secrets.DOCKER_USERNAME }}/backendproject:${{ github.sha }}"
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
