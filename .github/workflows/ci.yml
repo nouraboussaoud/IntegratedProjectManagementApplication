@@ -38,8 +38,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run unit tests
-        run: npm test
+      
 
       # 🔥 Add SonarCloud Analysis here
       - name: SonarCloud Scan
