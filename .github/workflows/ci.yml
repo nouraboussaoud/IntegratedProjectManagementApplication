@@ -13,10 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set environment variables
+        run: |
+          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> $GITHUB_ENV
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22.13.1'  # Update to the Node.js version you're using locally
+          node-version: '22.13.1'
 
       - name: Install dependencies
         run: |
@@ -24,7 +30,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          npm test  # Ensure this is the correct command to run your unit tests
+          npm test
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -34,9 +40,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set npm registry to default (ensure network access)
-        run: npm config set registry https://registry.npmjs.org/
 
       - name: Build Docker image
         run: |
