@@ -20,6 +20,10 @@ jobs:
             exit 1
           fi
 
+      # Set your actual Docker username
+      - name: Set Docker image name
+        run: echo "IMAGE_NAME=noura00/backendproject" >> $GITHUB_ENV
+
       - name: Set environment variables
         run: |
           echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
@@ -29,7 +33,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
@@ -52,8 +56,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
-          tags: "${{ secrets.DOCKER_USERNAME }}/backendproject:latest,${{ secrets.DOCKER_USERNAME }}/backendproject:${{ github.sha }}"
+          file: ./Dockerfile
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
