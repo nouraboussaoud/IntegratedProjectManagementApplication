@@ -51,8 +51,8 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: aboussaoud-nour
-          SONAR_PROJECT_KEY: aboussaoud-nour_IntegratedProjectManagementApplication
+          SONAR_ORGANIZATION: nouraboussaoud
+          SONAR_PROJECT_KEY: nouraboussaoud_IntegratedProjectManagementApplication
 
 
       - name: Set up Docker Buildx
