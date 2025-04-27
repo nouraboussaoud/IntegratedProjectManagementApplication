@@ -38,6 +38,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Added build-dev step here
+      - name: Build application
+        run: npm run build-dev
+
       - name: Run unit tests
         run: npm test
 
