@@ -41,6 +41,15 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+      # Setup SonarQube Scanner
+      - name: SonarQube Scan
+        uses: SonarSource/sonarcloud-github-action@v1
+        with:
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          sonar-host-url: 'http://localhost:9000' # Your local SonarQube URL
+          projectKey: 'noura00-backendproject'    # Replace with your project key
+          projectName: 'Backend Project'          # Replace with your project name
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
