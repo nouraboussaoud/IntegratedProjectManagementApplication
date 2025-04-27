@@ -43,7 +43,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/backendproject:latest .
+          docker buildx build -t ${{ secrets.DOCKER_USERNAME }}/backendproject:latest .
 
       - name: Push Docker image to Docker Hub
         run: |
