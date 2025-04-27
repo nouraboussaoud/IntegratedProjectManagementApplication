@@ -8,7 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,6 +19,10 @@ jobs:
             echo "❌ Dockerfile missing!"
             exit 1
           fi
+
+      # Set your actual Docker username
+      - name: Set Docker image name
+        run: echo "IMAGE_NAME=noura00/backendproject" >> $GITHUB_ENV
 
       - name: Set environment variables
         run: |
@@ -53,9 +56,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          file: ./Dockerfile
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/backendproject:latest
-            ${{ secrets.DOCKER_USERNAME }}/backendproject:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
