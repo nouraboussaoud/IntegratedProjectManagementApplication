@@ -18,7 +18,7 @@ const router = express.Router();
 router.post("/createProject",verifyToken , createProject);
 // Get all projects
 
-router.get("/projects", getAllProjects);
+router.get("/projects",verifyToken , getAllProjects);
 
 // Get project by ID
 router.get("/projects/:name", getProjectByName);
@@ -29,5 +29,6 @@ router.get("/projects/:id", getProjectById);
 // Delete project by ID
 router.delete("/projects/:id", deleteProject);
 router.get("/:id/progress", calculateProjectProgress);
+
 
 module.exports = router;

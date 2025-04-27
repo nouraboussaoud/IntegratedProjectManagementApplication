@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clean node_modules') {
+            steps {
+                script {
+                    sh 'rm -rf node_modules'  // Clean node_modules to force a fresh install
+                }
+            }
+        }
+
+        stage('Install dependencies') {
+            steps {
+                script {
+                    sh 'npm install'  // Install dependencies
+                }
+            }
+        }
+
+        stage('Rebuild bcrypt') {
+            steps {
+                script {
+                    sh 'npm rebuild bcrypt'  // Rebuild bcrypt for the Jenkins environment
+                }
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                script {
+                    sh 'npm test'  // Run tests
+                }
+            }
+        }
+
+        stage('Build application') {
+            steps {
+                script {
+                    sh 'npm run dev'  // Build the application
+                }
+            }
+        }
+    }
+
+   
+}

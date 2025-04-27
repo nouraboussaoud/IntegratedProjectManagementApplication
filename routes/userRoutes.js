@@ -1,5 +1,11 @@
-const express = require("express");
+const express = require('express');
+const User = require("../models/User");
+const jwt = require('jsonwebtoken');
+const bcrypt = require("bcrypt");
+ // Middleware d'authentification
+const passport =require ("passport");
 const {
+ 
   registerUser,
   loginUser,
   logoutUser,
@@ -14,12 +20,50 @@ const {
   getAllUsers,
   toggleBanStatus,
   githubAuth,
-  githubCallback
+  githubCallback,
+  getAvailableSkills,   
+    updateUserSkills,
+    getCurrentUserSkills     
+ 
+  
 } = require("../controllers/userController");
+
 
 const { isAdmin } = require("../middleware/roleMiddleware");
 const { upload } = require("../uploadimage");
 const router = express.Router();
+router.get("/google", 
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+router.get("/google/callback", 
+  passport.authenticate("google", { failureRedirect: "/login/failed" }),
+  async (req, res) => {
+    if (!req.user) {
+      console.error("❌ Aucun utilisateur trouvé après Google Auth.");
+      return res.redirect("http://localhost:3000/login?error=auth_failed");
+    }
+
+    console.log("✅ Utilisateur authentifié :", req.user);
+
+    // Générer un token JWT avec le rôle
+    const token = jwt.sign(
+      { userId: req.user._id, role: req.user.role },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+
+    // Construire l'URL de redirection avec le rôle
+    const redirectURL = `http://localhost:3000/login?token=${token}&role=${req.user.role}`;
+    console.log("✅ URL de redirection :", redirectURL);
+
+    // Rediriger le frontend
+    res.redirect(redirectURL);
+  }
+);
+
+
+
 
 // Protect the routes with verifyToken middleware
 router.get('/getAll', verifyToken, getAllUsers); // Get all users requires token
@@ -40,5 +84,8 @@ router.put('/ban-user/:id', verifyToken, toggleBanStatus); // Ban user requires 
 router.get('/auth/github', githubAuth);
 router.get('/auth/github/callback', githubCallback);
 
+router.get('/skills',  getAvailableSkills);
+router.put('/skills', verifyToken, updateUserSkills);
+router.get('/me/skills', verifyToken, getCurrentUserSkills);
 
 module.exports = router;

@@ -29,6 +29,7 @@ const getAllUsers = async (req, res) => {
     };
 
   
+    
   // Register (Sign Up) with file upload
   const registerUser = async (req, res) => {
       const { name, email, password, role } = req.body;
@@ -85,7 +86,7 @@ const getAllUsers = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
   };
-  //////////login
+ 
   const loginUser = async (req, res) => { 
     try {
         // Find the user
@@ -115,13 +116,13 @@ const getAllUsers = async (req, res) => {
             return res.status(401).json({ message: 'Your account is banned' });
         }
 
-        // Generate token
-        const token = jwt.sign(
-            { userId: user._id, role: user.role }, 
-            secretKey, 
-            { expiresIn: '1h' }
-        );
 
+      
+        const token = jwt.sign(
+            { userId: user._id, role: user.role, accessToken: user.accessToken }, // Include accessToken
+            secretKey, 
+            { expiresIn: '24h' }
+        );
         console.log('Token generated successfully'); // Debugging log
 
         // Send single response with all necessary data
@@ -394,6 +395,55 @@ const githubCallback = (req, res, next) => {
       })(req, res, next);
 
 };
+const getAvailableSkills = (req, res) => {
+    try {
+      // Liste fixe des compétences
+      const skills = [
+        "javascript", "python", "java", "c#", "c++", "react", "angular", 
+        "vue.js", "node.js", "express", "mongodb", "mysql", "postgresql",
+        "docker", "git", "aws", "azure", "machine learning", "data science",
+        "cybersecurity", "typescript", "php", "ruby", "swift", "kotlin",
+        "django", "flask", "spring", "laravel", "tensorflow", "pytorch", 
+        "nlp", "computer vision" , "redux" , "graphql" , "flutter" , "react native" , "jest" , "css" , "sql" , "airflow" , "pyspark" ,"kubernetes", "helm", "istio", "serverless", "terraform", 
+  "prometheus", "grafana", "argoCD", "vault", "grpc", 
+  "keda", "kubeflow", "jenkins", "github actions", "opa"
+];
+      res.status(200).json(skills);
+    } catch (error) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  };
+  
+  const updateUserSkills = async (req, res) => {
+    try {
+      const { skills } = req.body;
+      const user = await User.findByIdAndUpdate(
+        req.userId,
+        { skills },
+        { new: true }
+      );
+      res.status(200).json({
+        message: "Compétences mises à jour",
+        skills: user.skills
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  };
+  const getCurrentUserSkills = async (req, res) => {
+    try {
+      const userId = req.userId; // extrait depuis verifyToken
+  
+      const user = await User.findById(userId).select('skills');
+      if (!user) return res.status(404).json({ message: "User not found" });
+  
+      res.status(200).json(user.skills);
+    } catch (error) {
+      console.error("Error fetching user skills:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+  
 
 module.exports = {
     registerUser,
@@ -410,5 +460,8 @@ module.exports = {
     toggleBanStatus,
     getAllUsers ,
     githubAuth,
-    githubCallback
+    githubCallback,
+    getAvailableSkills,   
+    updateUserSkills,
+    getCurrentUserSkills      
 };

@@ -1,7 +1,9 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+
 const UserSchema = new mongoose.Schema({
+  googleId: { type: String, unique: true, sparse: true },
   name: {
     type: String,
     required: true
@@ -45,7 +47,18 @@ const UserSchema = new mongoose.Schema({
   isBanned: {
     type: Boolean,
     default: false
+  },
+  skills: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: function(skills) {
+        // Limite à 10 compétences maximum
+        return skills.length <= 10;
+      },
+      message: "Vous ne pouvez pas sélectionner plus de 10 compétences"
+    }
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model("User", UserSchema);
