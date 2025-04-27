@@ -1,20 +1,20 @@
-# Étape 1 : Utiliser une image de base pour Node.js
+# Node.js base image
 FROM node:20
 
-# Étape 2 : Définir le répertoire de travail
+# Set working directory
 WORKDIR /app
 
-# Étape 3 : Copier package.json et package-lock.json pour installer les dépendances
+# Copy package.json and package-lock.json first
 COPY package*.json ./
 
-# Étape 4 : Installer les dépendances
+# Set correct npm registry
+RUN npm config set registry https://registry.npmjs.org/
+
+# Install dependencies
 RUN npm install
 
-# Étape 5 : Copier tout le code source de l'application dans le conteneur
+# Copy source code
 COPY . .
 
-# Étape 6 : Exposer le port du serveur back-end
-EXPOSE 5000
-
-# Étape 7 : Lancer le serveur back-end
-CMD ["npm", "run", "dev"]
+# Start command
+CMD ["npm", "start"]

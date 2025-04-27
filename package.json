@@ -16,6 +16,7 @@
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -36,6 +37,7 @@
     "stemmer": "^2.0.1"
   },
   "devDependencies": {
+    "@babel/helper-string-parser": "^7.25.9",
     "@babel/preset-env": "^7.26.9",
     "@babel/register": "^7.25.9",
     "babel-jest": "^29.7.0",
