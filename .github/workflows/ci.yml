@@ -32,6 +32,14 @@ jobs:
         run: |
           npm test
 
+      - name: Verify Dockerfile exists
+        run: |
+          if [ ! -f Dockerfile ]; then
+            echo "❌ Error: Dockerfile not found in root directory!"
+            ls -la
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -46,4 +54,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/backendprojectt:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/backendproject:latest
