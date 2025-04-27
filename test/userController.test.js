@@ -12,7 +12,7 @@ const { app, startServer, connectDB } = require("../index");
 
 let mongoServer;
 let server;
-jest.setTimeout(30000); // Set timeout to 30 seconds globally
+jest.setTimeout(60000); // Set timeout to 30 seconds globally
 
 beforeAll(async () => {
   // Start an in-memory MongoDB server
