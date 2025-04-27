@@ -13,32 +13,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set environment variables
+      - name: Verify Dockerfile exists
         run: |
-          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> $GITHUB_ENV
+          ls -la
+          if [ ! -f Dockerfile ]; then
+            echo "❌ Dockerfile not found!"
+            exit 1
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22.13.1'
+          node-version: '20'
 
       - name: Install dependencies
-        run: |
-          npm install
+        run: npm install
 
       - name: Run unit tests
-        run: |
-          npm test
-
-      - name: Verify Dockerfile exists
-        run: |
-          if [ ! -f Dockerfile ]; then
-            echo "❌ Error: Dockerfile not found in root directory!"
-            ls -la
-            exit 1
-          fi
+        run: npm test
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
