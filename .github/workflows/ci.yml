@@ -1,4 +1,4 @@
-name: ci
+name: CI
 
 on:
   push:
@@ -8,24 +8,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set npm registry to default (ensure network access)
+        run: npm config set registry https://registry.npmjs.org/
 
-      - name: Build and test
-        uses: docker/build-push-action@v6
-        with:
-          load: true
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/backendproject:latest .
+          
+      - name: Push Docker image to Docker Hub
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/backendproject:latest
