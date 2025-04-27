@@ -1,31 +1,78 @@
-name: ci
+name: CI
 
 on:
   push:
     branches:
-      - Nour
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify Docker setup
+        run: |
+          ls -la
+          if [ ! -f Dockerfile ]; then
+            echo "❌ Dockerfile missing!"
+            exit 1
+          fi
+
+      - name: Set Docker image name
+        run: echo "IMAGE_NAME=noura00/backendproject" >> $GITHUB_ENV
+
+      - name: Set environment variables
+        run: |
+          echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> $GITHUB_ENV
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test
+
+      # 🔥 Add SonarCloud Analysis here
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.host.url=https://sonarcloud.io
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: aboussaoud-nour
+          SONAR_PROJECT_KEY: aboussaoud-nour_IntegratedProjectManagementApplication
+
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and test
-        uses: docker/build-push-action@v6
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
-          load: true
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          platforms: linux/amd64,linux/arm64
+          context: .
+          file: ./Dockerfile
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
