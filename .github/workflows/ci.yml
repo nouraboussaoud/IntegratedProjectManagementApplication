@@ -13,6 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Verify Docker setup
+        run: |
+          ls -la
+          if [ ! -f Dockerfile ]; then
+            echo " Dockerfile missing!"
+            exit 1
+          fi
+
+      - name: Set Docker image name
+        run: echo "IMAGE_NAME=noura00/backendproject" >> $GITHUB_ENV
+
       - name: Set environment variables
         run: |
           echo "MONGO_URI=${{ secrets.MONGO_URI }}" >> $GITHUB_ENV
@@ -22,23 +33,29 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22.13.1'
+          node-version: '22'
 
       - name: Install dependencies
-        run: |
-          npm install
+        run: npm install
 
       - name: Run unit tests
-        run: |
-          npm test
+        run: npm test
 
-      - name: Verify Dockerfile exists
-        run: |
-          if [ ! -f Dockerfile ]; then
-            echo "❌ Error: Dockerfile not found in root directory!"
-            ls -la
-            exit 1
-          fi
+      # 🔥 Add SonarCloud Analysis here
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.host.url=https://sonarcloud.io
+            
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: nouraboussaoud
+          SONAR_PROJECT_KEY: nouraboussaoud_IntegratedProjectManagementApplication
+
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -53,5 +70,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/backendproject:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
