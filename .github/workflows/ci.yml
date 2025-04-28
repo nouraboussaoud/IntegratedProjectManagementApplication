@@ -38,15 +38,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run unit tests with coverage
-        run: npm test -- --coverage  # Ensure coverage is included in the test command
-
-      # Upload Jest coverage report as an artifact (optional, for analysis)
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: jest-coverage
-          path: coverage/  # Assuming Jest stores the coverage report in the "coverage" directory
+      - name: Run unit tests
+        run: npm test
 
       # 🔥 Add SonarCloud Analysis here
       - name: SonarCloud Scan
@@ -57,10 +50,12 @@ jobs:
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.host.url=https://sonarcloud.io
+            
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_ORGANIZATION: nouraboussaoud
           SONAR_PROJECT_KEY: nouraboussaoud_IntegratedProjectManagementApplication
+
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
