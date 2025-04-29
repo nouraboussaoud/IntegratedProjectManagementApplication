@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest --detectOpenHandles",
+    "test": "jest --coverage",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
