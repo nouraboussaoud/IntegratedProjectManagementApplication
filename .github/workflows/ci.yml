@@ -38,8 +38,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run unit tests
-        run: npm test
+      - name: Run unit tests with coverage
+        run: npm test -- --coverage 
+
+      - name: Check coverage ouput
+        run: ls-la coverage
 
       # 🔥 Add SonarCloud Analysis here
       - name: SonarCloud Scan
@@ -50,12 +53,17 @@ jobs:
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_ORGANIZATION: nouraboussaoud
           SONAR_PROJECT_KEY: nouraboussaoud_IntegratedProjectManagementApplication
-
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
