@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for SonarCloud to analyze all history
 
       - name: Verify Docker setup
         run: |
@@ -38,26 +40,24 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         run: npm test -- --coverage
 
-      # 🔥 Add SonarCloud Analysis here
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         with:
           projectBaseDir: .
           args: >
-            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=nouraboussaoud
+            -Dsonar.projectKey=nouraboussaoud_IntegratedProjectManagementApplication
             -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov-report/index.html
-
-            
+            -Dsonar.sources=.
+            -Dsonar.exclusions=node_modules/**,coverage/**,**/*.test.js,**/*.spec.js
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/tests/**,**/node_modules/**
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed for PR decoration
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: nouraboussaoud
-          SONAR_PROJECT_KEY: nouraboussaoud_IntegratedProjectManagementApplication
-
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
