@@ -50,6 +50,8 @@ jobs:
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov-report/index.html
+
             
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
