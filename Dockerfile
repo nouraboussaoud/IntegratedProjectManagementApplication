@@ -16,5 +16,6 @@ COPY . .
 # Étape 6 : Exposer le port du serveur back-end
 EXPOSE 5000
 
+
 # Étape 7 : Lancer le serveur back-end
 CMD ["npm", "run", "dev"]

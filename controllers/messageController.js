@@ -394,11 +394,16 @@ const userTyping = (io, socket, data) => {
 };
 
 // Get online users
+// Get online users
 const getOnlineUsers = async (req, res) => {
   try {
     const io = req.app.get('io');
+    // Using newer approach to validate ObjectIds
     const onlineUsers = Object.keys(io.sockets.adapter.rooms)
-      .filter(room => mongoose.Types.ObjectId.isValid(room));
+      .filter(room => {
+        // Check if the string matches ObjectId pattern
+        return /^[0-9a-fA-F]{24}$/.test(room);
+      });
     
     res.json({ onlineUsers });
   } catch (error) {
