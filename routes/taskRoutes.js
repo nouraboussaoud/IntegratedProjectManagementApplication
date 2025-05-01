@@ -19,6 +19,7 @@ const {
     getTaskWithProgress,
     trackGitHubCommits,
     predictRisk,
+    getMyTasks,
 } = require("../controllers/taskController");
 const { verifyToken } = require("../controllers/userController");
 
@@ -39,7 +40,9 @@ router.get("/sortTasksByPriority",verifyToken , sortTasksByPriority);
 router.put("/updateTaskProgress/:id",verifyToken , updateTaskProgress); // Uncomment if needed
 router.get("/getTaskWithProgress",verifyToken , getTaskWithProgress); // Uncomment if needed
 // ✅ Route to fetch GitHub commits and update task progress
-router.get("/track-commits/:taskId/:repoOwner/:repoName/:branchName",verifyToken, trackGitHubCommits);
+router.get("/track-commits/:taskId", verifyToken, trackGitHubCommits);
 // Route to handle task risk prediction
 router.post('/predict-risk', predictRisk);
-module.exports = router;
+router.get('/myTasks', verifyToken, getMyTasks);module.exports = router;
+
+

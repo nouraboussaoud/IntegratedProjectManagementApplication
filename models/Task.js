@@ -32,35 +32,34 @@ const taskSchema = new mongoose.Schema({
       enum: ['low', 'medium', 'high', 'urgent'],
       default: 'medium',
     },
-
     // 🔹 Progress Tracking Fields
     progressPercentage: {
       type: Number,
-      default: 0, // Starts at 0%
+      default: 0,
     },
     deadline: {
       type: Date,
-      required: false, // Ensure tasks have a deadline
+      required: false,
     },
     completedOn: {
-      type: Date, // Captures the actual completion date
+      type: Date,
       default: null,
     },
     timeSpent: {
       type: Number,
-      default: 0, // Tracks time spent in hours
+      default: 0,
     },
     revisions: {
       type: Number,
-      default: 0, // Number of times the task was revised
+      default: 0,
     },
     missedDeadlines: {
       type: Number,
-      default: 0, // Tracks how many times a deadline was missed
-    } ,
+      default: 0,
+    },
     taskDetails: {
       type: String,
-      required: false, // Optionnel au début, mais recommandé
+      required: false,
     },
     risk: {
       type: String,
@@ -69,9 +68,21 @@ const taskSchema = new mongoose.Schema({
     },
     riskConfidence: {
       type: Number,
-      default: 0, // Score de confiance entre 0-1
-    } 
-     
+      default: 0,
+    },
+    // 🔹 New GitHub Repository Fields
+    repoOwner: {
+      type: String,
+      required: false,
+    },
+    repoName: {
+      type: String,
+      required: false,
+    },
+    branchName: {
+      type: String,
+      required: false,
+    }
 });
 
 module.exports = mongoose.model('Task', taskSchema);
