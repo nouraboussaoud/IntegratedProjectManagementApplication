@@ -175,26 +175,42 @@ const verifyToken = (req, res, next) => {
 };
 
 // Modify Account (Update User)
+// In userController.js, updateUser function
 const updateUser = async (req, res) => {
     const { name, email, role } = req.body;
-
     try {
-        const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        user.name = name || user.name;
-        user.email = email || user.email;
-        if (role && ["student", "tutor"].includes(role)) {
-            user.role = role;
-        }
-
-        await user.save();
-        res.status(200).json({ message: "User updated successfully", user });
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+  
+      // Allow admin role if the requester is an admin
+      const requester = await User.findById(req.userId);
+      if (
+        role &&
+        ["student", "tutor", "admin"].includes(role) &&
+        requester.role === "admin"
+      ) {
+        user.role = role;
+      } else if (role && !["student", "tutor"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+  
+      user.name = name || user.name;
+      user.email = email || user.email;
+      await user.save();
+      res.status(200).json({ message: "User updated successfully", user });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error });
+      res.status(500).json({ message: "Server error", error });
     }
-};
-
+  };
+  const getCurrentUser = async (req, res) => {
+    try {
+      const user = await User.findById(req.userId).select("name email role");
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Server error", error });
+    }
+  };
 // Delete Account
 const deleteUser = async (req, res) => {
     try {
@@ -463,5 +479,6 @@ module.exports = {
     githubCallback,
     getAvailableSkills,   
     updateUserSkills,
-    getCurrentUserSkills      
+    getCurrentUserSkills ,
+    getCurrentUser
 };
