@@ -164,11 +164,55 @@ const checkAttendanceExists = async (req, res) => {
     }
   };
 
+  const getAttendanceStats = async (req, res) => {
+    try {
+      const { groupId } = req.params;
+  
+      // Récupérer toutes les sessions du groupe
+      const attendances = await Attendance.find({ group: groupId });
+  
+      if (attendances.length === 0) {
+        return res.status(404).json({ message: "Aucune session trouvée" });
+      }
+  
+      // Obtenir tous les membres du groupe
+      const group = await Group.findById(groupId).populate("members", "name email");
+      const members = group.members;
+  
+      // Initialiser un objet pour stocker les stats
+      const stats = {};
+  
+      members.forEach(member => {
+        stats[member._id] = {
+          name: member.name,
+          email: member.email,
+          present: 0,
+          absent: 0,
+          totalSessions: attendances.length
+        };
+      });
+  
+      // Parcourir chaque session d'attendance
+      attendances.forEach(session => {
+        session.presentMembers.forEach(memberId => {
+          if (stats[memberId]) stats[memberId].present += 1;
+        });
+        session.absentMembers.forEach(memberId => {
+          if (stats[memberId]) stats[memberId].absent += 1;
+        });
+      });
+  
+      res.status(200).json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Erreur serveur", error: error.message });
+    }
+  };
 module.exports = {
   recordAttendance,
   getAllAttendance,
   checkAttendanceExists,
   getAttendanceByGroupId,
   updateAttendance,
-  deleteAttendance
+  deleteAttendance,
+  getAttendanceStats
 };

@@ -5,7 +5,7 @@ const {
   getAllAttendance, 
   checkAttendanceExists, 
   getAttendanceByGroupId, 
-  updateAttendance ,deleteAttendance
+  updateAttendance ,deleteAttendance,getAttendanceStats
 } = require("../controllers/AttendanceController");
 const router = express.Router();
 
@@ -18,6 +18,7 @@ router.get("/", verifyToken, getAllAttendance);
 // Route pour vérifier si l'attendance existe déjà pour un groupe à une date donnée
 router.get("/group/:groupId/date/:sessionDate", verifyToken, checkAttendanceExists);
 
+router.get("/group/:groupId/stats", verifyToken, getAttendanceStats); // 💡 à créer dans le contrôleur
 
 
 // Modifiez vos routes comme suit :
