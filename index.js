@@ -7,6 +7,8 @@ const { initializeSocketServer } = require("./socket/socketServer");
 const jwt = require("jsonwebtoken");
 const fetch = require("node-fetch");
 const axios = require('axios');
+
+
 //const aiDetectionRoutes = require('./routes/aiDetection.routes');
 
 
@@ -20,6 +22,7 @@ const deliverableRoutes = require("./routes/deliverableRoutes"); // Import the d
 const passport = require('passport');
 require("./middleware/passport")();
 const path = require("path");
+
 
 dotenv.config(); // Load environment variables
 // Initialize Cloudinary
@@ -47,7 +50,8 @@ app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+const summaryRoute = require('./routes/summary');
+app.use('/api/summary', summaryRoute);
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",
@@ -123,5 +127,6 @@ if (require.main === module) {
   connectDB();
   server = startServer();
 }
+
 
 module.exports = { app, server, connectDB, startServer };
