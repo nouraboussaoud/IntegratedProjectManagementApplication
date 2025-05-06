@@ -13,7 +13,12 @@ const {
     
 } = require("../controllers/projectController");
 const { verifyToken } = require("../controllers/userController");
+const { startVideoCall, respondToVideoCall ,inviteToVideoCall } = require('../controllers/videoCallController');
 const router = express.Router();
+router.post("/:id/invite-call", verifyToken, inviteToVideoCall);
+router.post('/:id/start-call', verifyToken, startVideoCall);
+router.post('/:id/respond-call', verifyToken, respondToVideoCall);
+
 
 router.post("/createProject",verifyToken , createProject);
 // Get all projects

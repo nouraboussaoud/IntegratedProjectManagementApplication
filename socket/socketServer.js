@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const secretKey = process.env.JWT_SECRET_KEY || 'mysecretkey';
-
+const secretKey = process.env.JWT_SECRET_KEY || 'your_super_secret_key';
+let ioInstance = null;//douaa
 // Initialize socket server
 const initializeSocketServer = (server) => {
   const io = require('socket.io')(server, {
@@ -12,6 +12,8 @@ const initializeSocketServer = (server) => {
       credentials: true
     }
   });
+  
+
   // Middleware to authenticate socket connections
   io.use(async (socket, next) => {
     try {
@@ -71,5 +73,19 @@ const initializeSocketServer = (server) => {
   
   return io;
 };
+const emitToGroup = (groupId, event, data) => {
+  if (!ioInstance) {
+      console.error('Socket.IO instance not initialized');
+      return;
+  }
+  ioInstance.to(`group-${groupId}`).emit(event, data);
+};
 
-module.exports = { initializeSocketServer };
+const emitToUser = (userId, event, data) => {
+  if (!ioInstance) {
+      console.error('Socket.IO instance not initialized');
+      return;
+  }
+  ioInstance.to(userId).emit(event, data);
+};
+module.exports = { initializeSocketServer,  emitToGroup ,emitToUser};

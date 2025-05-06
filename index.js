@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const session = require("express-session");
 const cors = require("cors");
 const { initializeSocketServer } = require("./socket/socketServer");
+const setupVideoCallHandlers = require("./socket/videoCallHandler");
 const jwt = require("jsonwebtoken");
 const fetch = require("node-fetch");
 const axios = require('axios');
@@ -110,8 +111,8 @@ const connectDB = async (connectionString = process.env.MONGO_URI) => {
 const startServer = (port = process.env.PORT || 5001) => {
   const server = app.listen(port, () => console.log(`Server running on port ${port}`));
 
-  // Initialize Socket.IO
   const io = initializeSocketServer(server);
+  setupVideoCallHandlers(io); // Add this line to initialize video call handlers
   app.set('io', io);
 
   return server;
@@ -132,7 +133,11 @@ app.get('/auth/google/callback',
     }
 
     console.log("✅ Authenticated user:", req.user);
-
+    console.log("User from Passport:", {
+      id: req.user._id,
+      role: req.user.role,
+      profile: req.user.profilePic
+    });
     // Generate JWT token
     const token = jwt.sign(
       { userId: req.user._id, role: req.user.role },
@@ -140,21 +145,22 @@ app.get('/auth/google/callback',
       { expiresIn: "1h" }
     );
 
-    // Determine redirect path based on role
-    let redirectPath = "/home";
-    if (req.user.role === "admin") redirectPath = "/admin-dashboard";
-    else if (req.user.role === "tutor") redirectPath = "/tutor-dashboard";
-    else if (req.user.role === "student") redirectPath = "/student-dashboard";
+    
 
     // Prepare user data
     const userData = {
-      _id: req.user._id,
+      _id: req.user._id.toString(),
       name: req.user.name,
       email: req.user.email,
       profilePic: req.user.profilePic,
       role: req.user.role,
     };
     console.log("✅ Données utilisateur à envoyer :", userData);
+    // Determine redirect path based on role
+    let redirectPath = "/home";
+    if (req.user.role === "admin") redirectPath = "/admin-dashboard";
+    else if (req.user.role === "tutor") redirectPath = "/tutor-dashboard";
+    else if (req.user.role === "student") redirectPath = "/student-dashboard";
     // Construct redirect URL (now declared BEFORE usage)
     const redirectURL = `http://localhost:3000${redirectPath}?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
     
