@@ -120,11 +120,18 @@ const sendMessage = async (req, res) => {
       return res.status(404).json({ message: "Sender not found" });
     }
 
+    // Log roles for debugging
+    console.log("Sender role:", sender.role);
+    console.log("Receiver role:", receiver.role);
+
     // Check if receiver is banned
     if (receiver.isBanned) {
       return res.status(403).json({ message: "Cannot send message to banned user" });
     }
 
+    // Remove any role-based restrictions that might be causing the issue
+    // Allow any user to message any other user regardless of role
+    
     // Create and save the message
     const message = new Message({
       sender: senderId,
@@ -142,8 +149,8 @@ const sendMessage = async (req, res) => {
 
     // Populate sender and receiver info for the socket event
     const populatedMessage = await Message.findById(message._id)
-      .populate('sender', 'name email profilePic')
-      .populate('receiver', 'name email profilePic');
+      .populate('sender', 'name email profilePic role')
+      .populate('receiver', 'name email profilePic role');
 
     // Get the io instance
     const io = req.app.get('io');

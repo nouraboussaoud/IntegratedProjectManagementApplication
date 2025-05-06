@@ -81,6 +81,12 @@ app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
 
+// Add AI routes
+const aiRoutes = require('./routes/aiRoutes');
+
+// Register AI Routes
+app.use('/api/ai', aiRoutes);
+
 // Prediction API endpoint
 app.post('/predict', async (req, res) => {
   try {
