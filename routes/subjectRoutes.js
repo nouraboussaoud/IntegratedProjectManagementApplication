@@ -17,3 +17,4 @@ router.put("/updateSubject/:id", verifyToken, updateSubject);
 router.delete("/deleteSubject/:id", verifyToken, deleteSubject);
 router.get("/assign", verifyToken, assignSubjectsToGroups);
 module.exports = router;
+
