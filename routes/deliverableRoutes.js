@@ -7,9 +7,12 @@ const {
   getBranches, 
   getRepositories ,
   submitEvaluation,
-  getEvaluation
+  getEvaluation,
+  getFile 
 } = require("../controllers/DeliverableController");
 const { authenticateToken } = require("../middleware/verifyTokenMiddleware");
+
+
 
 const router = express.Router();
 
@@ -38,5 +41,9 @@ router.post('/:deliverableId/evaluate', authenticateToken, submitEvaluation);
 
 // Get evaluation
 router.get('/:deliverableId/evaluation', authenticateToken, getEvaluation);
+
+router.get('/:deliverableId/file', authenticateToken, getFile);
+
+
 
 module.exports = router;

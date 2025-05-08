@@ -7,7 +7,6 @@ const { initializeSocketServer } = require("./socket/socketServer");
 const jwt = require("jsonwebtoken");
 const fetch = require("node-fetch");
 const axios = require('axios');
-require("dotenv").config();
 
 const User = require("./models/User");
 const userRoutes = require("./routes/userRoutes");
@@ -22,6 +21,8 @@ const passport = require('passport');
 require("./middleware/passport")();
 const path = require("path");
 require("./passport"); 
+
+
 dotenv.config(); // Load environment variables
 // Initialize Cloudinary
 const cloudinary = require('cloudinary').v2;
@@ -55,11 +56,9 @@ app.use(session({
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected..."))
-  .catch((err) => console.error(err));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const summaryRoute = require('./routes/summary');
+app.use('/api/summary', summaryRoute);
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",
@@ -80,6 +79,8 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
+//app.use("/api/aiDetection", aiDetectionRoutes); // Updated mount point to match frontend expectation
+//app.use("/api/plagiarism", aiDetectionRoutes); // Add plagiarism route mounting
 
 // Add AI routes
 const aiRoutes = require('./routes/aiRoutes');
