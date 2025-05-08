@@ -30,7 +30,7 @@ const extractTextWithOCR = async (buffer) => {
 
 // Call Hugging Face summarization model
 const getSummaryFromHuggingFace = async (text) => {
-  const truncatedText = text.slice(0, 2500);
+  const truncatedText = text.slice(0, 1000);
   const response = await axios.post(
     'https://api-inference.huggingface.co/models/facebook/bart-large-cnn',
     { inputs: truncatedText },
