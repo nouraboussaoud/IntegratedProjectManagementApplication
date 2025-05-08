@@ -74,7 +74,7 @@ router.post('/logout', verifyToken, logoutUser); // Logout requires token 🚀
 
 // Protected routes with verifyToken middleware
 router.put('/update/:id', verifyToken, updateUser); // Update user requires token
-router.delete('/delete/:id', verifyToken,deleteUser); // Delete user requires token
+router.delete('/delete/:id', verifyToken,  deleteUser); // Delete user requires token
 router.put('/toggle-status/:id', verifyToken, toggleUserStatus); // Toggle status requires token
 router.get('/:id', verifyToken, getUserById); // Get user by ID requires token
 router.put('/update-password/:id', verifyToken, updatePassword); // Update password requires token  ///
