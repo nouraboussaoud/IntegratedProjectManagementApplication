@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const passport = require('passport');
+const path = require('path');
+const fs = require('fs');
 
 const mongoose = require('mongoose');
 const { log } = require("console");
@@ -179,27 +181,49 @@ const verifyToken = (req, res, next) => {
 const updateUser = async (req, res) => {
     const { name, email, role } = req.body;
     try {
-      const user = await User.findById(req.params.id);
-      if (!user) return res.status(404).json({ message: "User not found" });
-  
-      // Allow admin role if the requester is an admin
-      const requester = await User.findById(req.userId);
-      if (
-        role &&
-        ["student", "tutor", "admin"].includes(role) &&
-        requester.role === "admin"
-      ) {
-        user.role = role;
-      } else if (role && !["student", "tutor"].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
-  
-      user.name = name || user.name;
-      user.email = email || user.email;
-      await user.save();
-      res.status(200).json({ message: "User updated successfully", user });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Verify the user is updating their own profile or is an admin
+        if (req.userId !== req.params.id && req.userRole !== 'admin') {
+          return res.status(403).json({ 
+            message: 'Unauthorized: You can only update your own profile' 
+          });
+        }
+
+        user.name = name || user.name;
+        user.email = email || user.email;
+        if (role && ["student", "tutor"].includes(role)) {
+            user.role = role;
+        }
+
+        // Handle profile picture if included in the request
+        if (req.file) {
+            // If user already has a profile picture, delete the old one
+            if (user.profilePic) {
+                const oldPicPath = path.join(__dirname, '..', 'uploads', 'profiles', user.profilePic);
+                if (fs.existsSync(oldPicPath)) {
+                    fs.unlinkSync(oldPicPath);
+                }
+            }
+            
+            // Update with new profile picture
+            user.profilePic = req.file.filename;
+        }
+
+        await user.save();
+        res.status(200).json({ 
+            message: "User updated successfully", 
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                profilePic: user.profilePic
+            }
+        });
     } catch (error) {
-      res.status(500).json({ message: "Server error", error });
+        res.status(500).json({ message: "Server error", error: error.message });
     }
   };
   const getCurrentUser = async (req, res) => {
@@ -459,7 +483,58 @@ const getAvailableSkills = (req, res) => {
       res.status(500).json({ message: "Internal server error" });
     }
   };
-  
+
+// Update Profile Picture
+const updateProfilePicture = async (req, res) => {
+  try {
+    // Check if a file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const userId = req.params.id;
+    
+    // Verify the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Verify the user is updating their own profile or is an admin
+    if (req.userId !== userId && req.userRole !== 'admin') {
+      return res.status(403).json({ 
+        message: 'Unauthorized: You can only update your own profile picture' 
+      });
+    }
+
+    // If user already has a profile picture, delete the old one
+    if (user.profilePic) {
+      const oldPicPath = path.join(__dirname, '..', 'uploads', 'profiles', user.profilePic);
+      if (fs.existsSync(oldPicPath)) {
+        fs.unlinkSync(oldPicPath);
+      }
+    }
+
+    // Update user with new profile picture filename
+    user.profilePic = req.file.filename;
+    await user.save();
+
+    // Return success with the updated user
+    res.status(200).json({ 
+      message: 'Profile picture updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePic: user.profilePic
+      }
+    });
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
 
 module.exports = {
     registerUser,
@@ -479,6 +554,6 @@ module.exports = {
     githubCallback,
     getAvailableSkills,   
     updateUserSkills,
-    getCurrentUserSkills ,
-    getCurrentUser
+    getCurrentUserSkills,
+    updateProfilePicture
 };

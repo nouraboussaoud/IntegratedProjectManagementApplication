@@ -505,43 +505,182 @@ const trackGitHubCommits = async (req, res) => {
   }
 };
 
+
+//////////////// hugging face predection 
+
 const predictTaskRisk = async (taskDetails) => {
-  const HUGGING_FACE_API_KEY = process.env.HUGGING_FACE_API_KEY;
+  if (!taskDetails) return null;
   
-  if (!taskDetails) {
+  const HUGGING_FACE_API_KEY = process.env.HUGGING_FACE_API_KEY;
+  if (!HUGGING_FACE_API_KEY) {
+    console.error('Hugging Face API key is not set');
     return null;
   }
+
+  // Configuration
+  const MAX_RETRIES = 3;
+  const INITIAL_BACKOFF = 1000; // 1 second
+  let currentBackoff = INITIAL_BACKOFF;
   
-  try {
-    const response = await fetch("https://api-inference.huggingface.co/models/facebook/bart-large-mnli", {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: `Predict deadline risk based on: ${taskDetails}`,
-        parameters: { candidate_labels: ["High Risk", "Low Risk"] },
-      }),
+  // Use T5 model with IA3 fine-tuning for classification
+  // This is a smaller, more efficient model that should be more responsive
+  const MODEL_URL = "https://api-inference.huggingface.co/models/google/t5-small";
+  
+  // Retry loop
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`Attempt ${attempt} of ${MAX_RETRIES}`);
+      
+      const response = await fetch(MODEL_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: `classify as high risk or low risk: ${taskDetails}`,
+        }),
+      });
+      
+      // Handle rate limiting
+      if (response.status === 429) {
+        console.log(`Rate limit exceeded (429). Backing off for ${currentBackoff}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, currentBackoff));
+        currentBackoff *= 2; // Exponential backoff
+        continue;
+      }
+      
+      // Handle other error status codes
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('Hugging Face response:', result);
+      
+      // Process the text generation result
+      if (result && typeof result === 'string') {
+        const generatedText = result.toLowerCase().trim();
+        const isHighRisk = generatedText.includes("high risk");
+        
+        // Calculate confidence based on the clarity of the response
+        let confidence = 0.75; // Default confidence
+        
+        if (generatedText === "high risk") {
+          confidence = 0.95; // Very clear high risk
+        } else if (generatedText === "low risk") {
+          confidence = 0.95; // Very clear low risk
+        } else if (generatedText.includes("high") && generatedText.includes("risk")) {
+          confidence = 0.85; // Contains high risk but with other text
+        } else if (generatedText.includes("low") && generatedText.includes("risk")) {
+          confidence = 0.85; // Contains low risk but with other text
+        }
+        
+        return {
+          risk: isHighRisk ? "High Risk" : "Low Risk",
+          confidence: confidence
+        };
+      }
+      
+      // Fallback to keyword-based assessment if model response is unexpected
+      return keywordBasedRiskAssessment(taskDetails);
+      
+    } catch (error) {
+      console.error(`Error in attempt ${attempt}:`, error.message);
+      
+      if (attempt < MAX_RETRIES) {
+        console.log(`Backing off for ${currentBackoff}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, currentBackoff));
+        currentBackoff *= 2; // Exponential backoff
+      } else {
+        console.error('Max retries reached. Falling back to keyword analysis.');
+        return keywordBasedRiskAssessment(taskDetails);
+      }
+    }
+  }
+  
+  return keywordBasedRiskAssessment(taskDetails);
+};
+
+// Helper function for keyword-based risk assessment as fallback
+const keywordBasedRiskAssessment = (taskDetails) => {
+  // Enhanced keyword-based risk assessment with weighted categories
+  const riskFactors = {
+    highRisk: {
+      keywords: [
+        'urgent', 'critical', 'immediate', 'emergency', 'asap', 
+        'deadline', 'tomorrow', 'today', 'overdue', 'late',
+        'priority', 'crucial', 'vital', 'essential'
+      ],
+      weight: 1.5
+    },
+    complexity: {
+      keywords: [
+        'complex', 'difficult', 'challenging', 'complicated', 'intricate',
+        'advanced', 'sophisticated', 'technical', 'specialized', 'expert'
+      ],
+      weight: 1.2
+    },
+    scope: {
+      keywords: [
+        'large', 'extensive', 'comprehensive', 'broad', 'wide',
+        'multiple', 'many', 'several', 'numerous', 'various'
+      ],
+      weight: 1.0
+    },
+    dependencies: {
+      keywords: [
+        'dependent', 'dependency', 'relies', 'reliant', 'prerequisite',
+        'blocker', 'blocking', 'contingent', 'conditional', 'waiting'
+      ],
+      weight: 1.3
+    }
+  };
+  
+  const taskDetailsLower = taskDetails.toLowerCase();
+  const totalWords = taskDetailsLower.split(/\s+/).length;
+  
+  // Calculate weighted score for each risk factor
+  let totalRiskScore = 0;
+  let totalWeight = 0;
+  
+  Object.entries(riskFactors).forEach(([category, { keywords, weight }]) => {
+    let categoryScore = 0;
+    
+    keywords.forEach(keyword => {
+      // Count occurrences of each keyword
+      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      const matches = taskDetailsLower.match(regex);
+      if (matches) {
+        categoryScore += matches.length;
+      }
     });
     
-    const result = await response.json();
-    console.log('Hugging Face response:', result);
-    
-    if (result && result.labels && result.scores && result.labels.length > 0) {
-      const maxIndex = result.scores.indexOf(Math.max(...result.scores));
-      
-      return {
-        risk: result.labels[maxIndex],
-        confidence: result.scores[maxIndex],
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Error predicting risk:', error);
-    return null;
-  }
+    // Normalize by text length and apply weight
+    const normalizedCategoryScore = (categoryScore / Math.max(1, totalWords)) * weight;
+    totalRiskScore += normalizedCategoryScore;
+    totalWeight += weight;
+  });
+  
+  // Calculate final risk score (0-1 scale)
+  const finalScore = Math.min(1, (totalRiskScore / totalWeight) * 10);
+  
+  // Dynamic threshold based on text length
+  const threshold = Math.max(0.15, Math.min(0.3, 0.15 + (totalWords / 1000)));
+  const isHighRisk = finalScore > threshold;
+  
+  // Calculate confidence (higher for extreme values, lower for borderline)
+  const distanceFromThreshold = Math.abs(finalScore - threshold);
+  const confidence = Math.min(0.99, Math.max(0.5, 0.5 + distanceFromThreshold * 2));
+  
+  console.log(`Fallback risk assessment: Score=${finalScore.toFixed(2)}, Threshold=${threshold.toFixed(2)}, High Risk=${isHighRisk}, Confidence=${confidence.toFixed(2)}`);
+  
+  return {
+    risk: isHighRisk ? "High Risk" : "Low Risk",
+    confidence: confidence
+  };
 };
+
 
 const predictRisk = async (req, res) => {
   const { taskId, taskDetails } = req.body;
