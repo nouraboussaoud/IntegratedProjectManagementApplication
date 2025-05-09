@@ -79,3 +79,6 @@ dist/
 build/.
 
 build/.node_modules/
+
+# Uploads directory
+uploads/
