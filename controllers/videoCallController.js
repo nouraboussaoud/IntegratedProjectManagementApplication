@@ -91,64 +91,32 @@ exports.respondToVideoCall = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
-
 exports.inviteToVideoCall = async (req, res) => {
-    try {
-      const { roomName, projectId, userIds } = req.body;
-      const callerId = req.userId;
-      
-      console.log(`📞 Caller ${callerId} inviting to call in project ${projectId}`);
-  
-      // Validate required fields
-      if (!roomName || !projectId || !userIds) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Missing required fields" 
-        });
-      }
-  
-      // Get caller details
-      const caller = await User.findById(callerId).select('name');
-      if (!caller) {
-        return res.status(404).json({ message: "Caller not found" });
-      }
-  
-      // Get project details
-      const project = await Project.findById(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-  
-      // Prepare notification payload
-      const notification = {
-        type: 'VIDEO_CALL_INVITATION',
-        from: callerId,
-        callerName: caller.name,
-        projectId: project._id,
-        projectName: project.name,
+  try {
+    const { roomName, projectId, userIds, projectName } = req.body;
+    const callerId = req.userId;
+
+    // Récupérer le nom du caller directement en base
+    const caller = await User.findById(callerId).select('name');
+    const callerName = caller?.name || "Un membre";
+
+    const io = req.app.get('io');
+
+    userIds.forEach(uid => {
+      io.to(uid).emit('video-call-invitation', {
+        type:        'VIDEO_CALL_INVITATION',
+        from:        callerId,
+        callerName,               // <-- récupéré en base
+        projectId,
+        projectName,
         roomName,
-        timestamp: new Date()
-      };
-  
-      // Send to each user individually
-      const io = req.app.get('io');
-      userIds.forEach(userId => {
-        console.log(`📤 Sending notification to user ${userId}`);
-        io.to(userId).emit('video-call-invitation', notification);
+        timestamp:   new Date()
       });
-  
-      res.status(200).json({ 
-        success: true,
-        message: "Invitations sent",
-        notification
-      });
-  
-    } catch (error) {
-      console.error("Error in inviteToVideoCall:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Server error",
-        error: error.message 
-      });
-    }
-  };
+    });
+
+    return res.status(200).json({ success: true, message: "Invitations sent" });
+  } catch (error) {
+    console.error("Error in inviteToVideoCall:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};

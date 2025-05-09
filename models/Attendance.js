@@ -15,13 +15,31 @@ const attendanceSchema = new mongoose.Schema({
     ref: "User"
   }],
   absentMembers: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    member: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    isJustified: {
+      type: Boolean,
+      default: false
+    },
+    justification: String,
+    followUpType: {
+      type: String,
+      enum: ["Normal follow-up day", "Validation day"],
+      default: "Normal follow-up day"
+    },
+
   }],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true
+  },
+  lastModified: {
+    type: Date,
+    default: Date.now
   }
 }, { timestamps: true });
 
