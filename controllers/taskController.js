@@ -738,6 +738,19 @@ const generateQuiz = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+    
+    // Check if the student has already passed any quiz for this task
+    // Check both the hasPassedQuiz field and the quizzes array
+    if (task.hasPassedQuiz || task.quizzes.some(quiz => 
+      quiz.attempts.some(attempt => 
+        attempt.userId.toString() === req.userId && attempt.passed
+      )
+    )) {
+      return res.status(403).json({ 
+        message: "You have already passed a quiz for this task and cannot generate another.",
+        alreadyPassed: true
+      });
+    }
 
     // Fetch commits from GitHub
     const commits = await fetchAllCommits(
@@ -1102,23 +1115,45 @@ function getLanguageFromExtension(ext) {
   return languageMap[ext] || 'unknown';
 }
 
+// taskController.js (partial)
 const submitQuiz = async (req, res) => {
   try {
-    const { taskId, quizId, answers } = req.body;
-    const { ObjectId } = mongoose.Types;
-    if (!ObjectId.isValid(taskId)) {
+    const { taskId, answers } = req.body;
+    const quizId = parseInt(req.params.quizId);
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return res.status(400).json({ message: "Invalid task ID format" });
     }
 
+    // Get task and validate permissions
     const task = await Task.findById(taskId);
-    if (!task || !task.quizzes[quizId]) {
-      return res.status(404).json({ message: "Task or quiz not found" });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
     }
 
+    // Check if the student is assigned to this task
     if (task.assignedTo.toString() !== req.userId) {
       return res.status(403).json({ message: "Unauthorized: Not assigned to this task" });
     }
 
+    // Check if the student has already passed ANY quiz for this task
+    const hasPassedQuiz = task.quizzes.some(quiz => 
+      quiz.attempts.some(attempt => 
+        attempt.userId.toString() === req.userId && attempt.passed
+      )
+    );
+    
+    if (hasPassedQuiz) {
+      return res.status(403).json({ 
+        message: "You have already passed a quiz for this task and cannot attempt another.",
+        alreadyPassed: true,
+        score: 0,
+        results: []
+      });
+    }
+
+    // Check for retry cooldown (if applicable)
     const lastAttempt = task.quizzes[quizId].attempts
       .filter(a => a.userId.toString() === req.userId)
       .sort((a, b) => b.completedAt - a.completedAt)[0];
@@ -1155,7 +1190,11 @@ const submitQuiz = async (req, res) => {
 
     quiz.attempts.push(attempt);
 
+    // When a quiz is passed, mark it in the task document
     if (attempt.passed) {
+      // Update a field in the task to indicate this student has passed a quiz
+      task.hasPassedQuiz = true;
+      
       let progressIncrement = 0;
       if (score >= 80) progressIncrement = 20;
       else if (score >= 60) progressIncrement = 10;
@@ -1163,27 +1202,12 @@ const submitQuiz = async (req, res) => {
       task.progressPercentage = Math.min(100, (task.progressPercentage || 0) + progressIncrement);
     }
 
-    const project = await Project.findById(task.project).populate('group');
-    if (project.group) {
-      const group = await Group.findById(project.group).populate('members');
-      const memberIds = group.members.map(m => m._id.toString());
-      const groupAttempts = quiz.attempts.filter(a => memberIds.includes(a.userId.toString()));
-      if (groupAttempts.length === memberIds.length) {
-        const avgScore = groupAttempts.reduce((sum, a) => sum + a.score, 0) / groupAttempts.length;
-        let groupIncrement = 0;
-        if (avgScore >= 80) groupIncrement = 20;
-        else if (avgScore >= 60) groupIncrement = 10;
-        else groupIncrement = 5;
-        task.progressPercentage = Math.min(100, (task.progressPercentage || 0) + groupIncrement);
-      }
-    }
-
     await task.save();
 
     res.status(200).json({
       message: attempt.passed ? "Quiz passed" : "Quiz failed",
       score,
-      results: attempt.passed ? results : [],
+      results,
       progressPercentage: task.progressPercentage
     });
   } catch (error) {
@@ -1191,36 +1215,40 @@ const submitQuiz = async (req, res) => {
     res.status(500).json({ message: "Error submitting quiz", error: error.message });
   }
 };
-
 const getQuizAnalytics = async (req, res) => {
   try {
-    const { taskId } = req.params;
-    const { ObjectId } = mongoose.Types;
-    if (!ObjectId.isValid(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID format" });
-    }
-
-    const task = await Task.findById(taskId).populate('assignedTo');
+    const taskId = req.params.taskId;
+    
+    const task = await Task.findById(taskId)
+      .populate('assignedTo', 'name username email')
+      .populate({
+        path: 'quizzes.attempts.userId',
+        select: 'name username email'
+      });
+    
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
-    }
-
-    const user = await User.findById(req.userId);
-    if (!user || user.role !== 'tutor') {
-      return res.status(403).json({ message: "Unauthorized: Tutor access required" });
     }
 
     const analytics = task.quizzes.map((quiz, quizId) => ({
       quizId,
       createdAt: quiz.createdAt,
-      attempts: quiz.attempts.map(attempt => ({
-        userId: attempt.userId,
-        username: task.assignedTo?.username || 'Unknown',
-        score: attempt.score,
-        passed: attempt.passed,
-        completedAt: attempt.completedAt,
-        results: attempt.results
-      }))
+      attempts: quiz.attempts.map(attempt => {
+        // Get the user data either from the populated userId or from task.assignedTo
+        const userData = attempt.userId ? 
+          (typeof attempt.userId === 'object' ? attempt.userId : null) : 
+          null;
+        
+        return {
+          userId: attempt.userId,
+          username: userData?.name || task.assignedTo?.name || 'Unknown',
+          email: userData?.email || task.assignedTo?.email || 'Unknown',
+          score: attempt.score,
+          passed: attempt.passed,
+          completedAt: attempt.completedAt,
+          results: attempt.results
+        };
+      })
     }));
 
     res.status(200).json({ message: "Quiz analytics retrieved", analytics });
@@ -1785,6 +1813,42 @@ function generateCommitMessageQuestions(commitMessage) {
   return questions;
 }
 
+const getMyQuizAttempts = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const userId = req.userId; // From verifyToken middleware
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid task ID format" });
+    }
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    // Extract only the attempts made by the current user
+    const attempts = task.quizzes.flatMap(quiz => 
+      quiz.attempts
+        .filter(attempt => attempt.userId.toString() === userId)
+        .map(attempt => ({
+          quizId: quiz._id,
+          createdAt: quiz.createdAt,
+          score: attempt.score,
+          passed: attempt.passed,
+          completedAt: attempt.completedAt,
+          results: attempt.results
+        }))
+    ).sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    res.status(200).json({ message: "Quiz attempts retrieved", attempts });
+  } catch (error) {
+    console.error("Error fetching quiz attempts:", error);
+    res.status(500).json({ message: "Error fetching quiz attempts", error: error.message });
+  }
+};
+
 module.exports = {
   getAllTasks,
   getTaskById,
@@ -1810,4 +1874,5 @@ module.exports = {
   generateQuiz,
   submitQuiz,
   getQuizAnalytics,
+  getMyQuizAttempts,
 };

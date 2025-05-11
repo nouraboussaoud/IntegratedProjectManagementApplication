@@ -130,6 +130,10 @@ const taskSchema = new mongoose.Schema({
         },
       }],
     }],
+    hasPassedQuiz: {
+      type: Boolean,
+      default: false
+    },
 });
 
 module.exports = mongoose.model('Task', taskSchema);
