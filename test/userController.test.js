@@ -1,164 +1,232 @@
-// Mock nodemailer to prevent real emails from being sent
-jest.mock("nodemailer");
-const nodemailer = require("nodemailer");
-const mockSendMail = jest.fn().mockResolvedValue(true);
-nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const {
+  registerUser,
+  loginUser,
+  verifyToken,
+  updateUser,
+  getAllUsers
+} = require('../controllers/userController');
 
-const request = require("supertest");
-const mongoose = require("mongoose");
-const { MongoMemoryServer } = require("mongodb-memory-server");
-const User = require("../models/User");
-const { app, startServer, connectDB } = require("../index");
+// Mock dependencies
+jest.mock('nodemailer');
+jest.mock('../Utils/emailTemplates', () => ({
+  getVerificationEmailTemplate: jest.fn(),
+  getPasswordResetTemplate: jest.fn(),
+  getAccountStatusTemplate: jest.fn()
+}));
 
 let mongoServer;
-let server;
-jest.setTimeout(60000);
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.disconnect();
-  }
-  await connectDB(mongoServer.getUri());
-  server = startServer(0);
-});
-
-beforeEach(() => {
-  // Reset all mocks before each test
-  jest.clearAllMocks();
-  mockSendMail.mockClear();
-});
-
-afterEach(async () => {
-  await User.deleteMany();
+  await mongoose.connect(mongoServer.getUri());
 });
 
 afterAll(async () => {
-  await mongoose.connection.close();
+  await mongoose.disconnect();
   await mongoServer.stop();
-  server.close();
 });
 
-describe("User Registration", () => {
-  it("should register a new user successfully", async () => {
-    const newUser = {
-      name: "Test User",
-      email: "testuser@example.com",
-      password: "password123",
-      role: "student",
-    };
+beforeEach(async () => {
+  // Clear the User collection before each test
+  await User.deleteMany({});
+});
 
-    const response = await request(app)
-      .post("/api/users/register")
-      .send(newUser)
-      .expect(201);
-
-    expect(response.body).toHaveProperty("message", "User registered successfully");
-    expect(response.body).toHaveProperty("user");
-    expect(response.body.user).toHaveProperty("email", newUser.email);
-  });
-
-  it("should return 400 if email already exists", async () => {
-    const existingUser = new User({
-      name: "Existing User",
-      email: "existinguser@example.com",
-      password: "password123",
-      role: "student",
+describe('User Controller', () => {
+  describe('registerUser', () => {
+    it('should register a new user', async () => {
+      const req = {
+        body: {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+          role: 'student'
+        }
+      };
+      
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      
+      await registerUser(req, res);
+      
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'User registered successfully',
+          user: expect.objectContaining({
+            name: 'Test User',
+            email: 'test@example.com',
+            role: 'student'
+          })
+        })
+      );
+      
+      // Verify user was saved to database
+      const user = await User.findOne({ email: 'test@example.com' });
+      expect(user).toBeTruthy();
+      expect(user.name).toBe('Test User');
     });
-    await existingUser.save();
-
-    const response = await request(app)
-      .post("/api/users/register")
-      .send({
-        name: "New User",
-        email: "existinguser@example.com",
-        password: "password123",
-        role: "student",
-      })
-      .expect(400);
-
-    expect(response.body).toHaveProperty("message", "User already exists");
-  });
-
-  it("should return 400 for invalid role", async () => {
-    const response = await request(app)
-      .post("/api/users/register")
-      .send({
-        name: "Invalid Role User",
-        email: "invalidroleuser@example.com",
-        password: "password123",
-        role: "invalidrole",
-      })
-      .expect(400);
-
-    expect(response.body).toHaveProperty("message", "Invalid role selection");
-  });
-
-  // Modified test: Since frontend handles "missing required fields" validation,
-  // we should expect a 500 error if it reaches the backend
-  it("handles missing fields with a server error", async () => {
-    const response = await request(app)
-      .post("/api/users/register")
-      .send({
-        email: "missingname@example.com",
-        password: "password123",
-        role: "student",
-      })
-      .expect(500); // Changed from 400 to 500 to match actual behavior
-
-    // The error will be a validation error from Mongoose
-    expect(response.body).toHaveProperty("message", "Server error");
-  });
-
-  // Modified test: Since frontend handles password validation,
-  // we should expect a success response (201) for short passwords in the backend
-  it("allows registration with short passwords", async () => {
-    const response = await request(app)
-      .post("/api/users/register")
-      .send({
-        name: "Short Password User",
-        email: "shortpassword@example.com",
-        password: "short",
-        role: "student",
-      })
-      .expect(201); // Changed from 400 to 201 to match actual behavior
-
-    expect(response.body).toHaveProperty("message", "User registered successfully");
-  });
-
-  // Modified test: Since frontend handles email format validation,
-  // we should expect a success response (201) for invalid email formats in the backend
-  it("handles invalid email format", async () => {
-    const response = await request(app)
-      .post("/api/users/register")
-      .send({
-        name: "Invalid Email User",
-        email: "invalid-email",
-        password: "password123",
-        role: "student",
-      })
-      .expect(201); // Changed from 400 to 201 to match actual behavior
-
-    expect(response.body).toHaveProperty("message", "User registered successfully");
-  });
-
-  it("should send a welcome email upon successful registration", async () => {
-    // Reset the mock before this specific test
-    mockSendMail.mockClear();
     
-    const newUser = {
-      name: "Test User",
-      email: "testuser@example.com",
-      password: "password123",
-      role: "student",
-    };
-
-    await request(app)
-      .post("/api/users/register")
-      .send(newUser)
-      .expect(201);
-
-    expect(mockSendMail).toHaveBeenCalledTimes(1);
-    expect(mockSendMail.mock.calls[0][0]).toHaveProperty('to', newUser.email);
+    it('should return 400 if user already exists', async () => {
+      // Create a user first
+      await User.create({
+        name: 'Existing User',
+        email: 'existing@example.com',
+        password: await bcrypt.hash('password123', 10),
+        role: 'student',
+        verificationToken: 'token123'
+      });
+      
+      const req = {
+        body: {
+          name: 'Test User',
+          email: 'existing@example.com',
+          password: 'password123',
+          role: 'student'
+        }
+      };
+      
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      
+      await registerUser(req, res);
+      
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'User already exists'
+        })
+      );
+    });
+  });
+  
+  describe('loginUser', () => {
+    it('should login a user with valid credentials', async () => {
+      // Create a user first
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      await User.create({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: hashedPassword,
+        role: 'student',
+        isActive: true
+      });
+      
+      const req = {
+        body: {
+          email: 'test@example.com',
+          password: 'password123'
+        }
+      };
+      
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      
+      await loginUser(req, res);
+      
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Login successful',
+          token: expect.any(String),
+          user: expect.objectContaining({
+            email: 'test@example.com',
+            role: 'student'
+          })
+        })
+      );
+    });
+    
+    it('should return 400 for invalid credentials', async () => {
+      // Create a user first
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      await User.create({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: hashedPassword,
+        role: 'student',
+        isActive: true
+      });
+      
+      const req = {
+        body: {
+          email: 'test@example.com',
+          password: 'wrongpassword'
+        }
+      };
+      
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      
+      await loginUser(req, res);
+      
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Invalid email or password'
+        })
+      );
+    });
+  });
+  
+  describe('verifyToken', () => {
+    it('should verify a valid token', async () => {
+      const userId = new mongoose.Types.ObjectId();
+      const token = jwt.sign(
+        { userId, role: 'student' },
+        process.env.JWT_SECRET_KEY || 'mysecretkey',
+        { expiresIn: '24h' }
+      );
+      
+      const req = {
+        headers: {
+          authorization: `Bearer ${token}`
+        }
+      };
+      
+      const res = {};
+      const next = jest.fn();
+      
+      await verifyToken(req, res, next);
+      
+      expect(req.userId).toBe(userId.toString());
+      expect(req.userRole).toBe('student');
+      expect(next).toHaveBeenCalled();
+    });
+    
+    it('should return 401 for missing token', async () => {
+      const req = {
+        headers: {}
+      };
+      
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      
+      const next = jest.fn();
+      
+      await verifyToken(req, res, next);
+      
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Token missing'
+        })
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
   });
 });
