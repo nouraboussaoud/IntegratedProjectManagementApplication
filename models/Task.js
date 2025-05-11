@@ -32,7 +32,6 @@ const taskSchema = new mongoose.Schema({
       enum: ['low', 'medium', 'high', 'urgent'],
       default: 'medium',
     },
-    // 🔹 Progress Tracking Fields
     progressPercentage: {
       type: Number,
       default: 0,
@@ -70,7 +69,6 @@ const taskSchema = new mongoose.Schema({
       type: Number,
       default: 0,
     },
-    // 🔹 New GitHub Repository Fields
     repoOwner: {
       type: String,
       required: false,
@@ -82,7 +80,56 @@ const taskSchema = new mongoose.Schema({
     branchName: {
       type: String,
       required: false,
-    }
+    },
+    quizzes: [{
+      questions: [{
+        question: {
+          type: String,
+          required: true,
+        },
+        options: [{
+          type: String,
+          required: true,
+        }],
+        correctAnswer: {
+          type: String,
+          required: true,
+        },
+        explanation: {
+          type: String,
+          required: true,
+        },
+      }],
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+      attempts: [{
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        score: {
+          type: Number,
+          required: true,
+        },
+        results: [{
+          question: String,
+          studentAnswer: String,
+          correctAnswer: String,
+          isCorrect: Boolean,
+          explanation: String,
+        }],
+        completedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        passed: {
+          type: Boolean,
+          required: true,
+        },
+      }],
+    }],
 });
 
 module.exports = mongoose.model('Task', taskSchema);
