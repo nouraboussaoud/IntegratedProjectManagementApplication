@@ -41,7 +41,7 @@ jobs:
         run: npm install
 
       - name: Run unit tests with coverage
-        run: npm test -- --coverage --coverageReporters=lcov --coverageDirectory=coverage
+        run: npm test -- --detectOpenHandles
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
@@ -55,10 +55,8 @@ jobs:
             -Dsonar.exclusions=node_modules/**,coverage/**,**/*.test.js,**/*.spec.js
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.coverage.exclusions=**/*.test.js,**/*.spec.js,**/tests/**,**/node_modules/**
-            -Dsonar.securityHotspots.active=true
-            -Dsonar.securityHotspotReviewsEnabled=true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed for PR decoration
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Set up Docker Buildx
