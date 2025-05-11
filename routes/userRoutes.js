@@ -23,9 +23,8 @@ const {
   githubCallback,
   getAvailableSkills,   
     updateUserSkills,
-    getCurrentUserSkills     
- 
-  
+    getCurrentUserSkills,
+    updateProfilePicture
 } = require("../controllers/userController");
 
 
@@ -87,5 +86,7 @@ router.get('/auth/github/callback', githubCallback);
 router.get('/skills',  getAvailableSkills);
 router.put('/skills', verifyToken, updateUserSkills);
 router.get('/me/skills', verifyToken, getCurrentUserSkills);
+
+router.put('/update-profile-picture/:id', verifyToken, upload.single('profilePic'), updateProfilePicture);
 
 module.exports = router;

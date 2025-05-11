@@ -543,19 +543,25 @@ const updateProfilePicture = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (req.userId !== userId && req.userRole !== "admin") {
+    // Authorization check - only allow users to update their own profile picture or admins
+    const isAdmin = req.userRole === "admin";
+    const isOwnProfile = req.userId === userId;
+    
+    if (!isAdmin && !isOwnProfile) {
       return res.status(403).json({
         message: "Unauthorized: You can only update your own profile picture",
       });
     }
 
+    // Delete old profile picture if it exists
     if (user.profilePic) {
-      const oldPicPath = path.join(__dirname, "..", "Uploads", "profiles", user.profilePic);
+      const oldPicPath = path.join(__dirname, "..", "uploads", "profiles", user.profilePic);
       if (fs.existsSync(oldPicPath)) {
         fs.unlinkSync(oldPicPath);
       }
     }
 
+    // Update user with new profile picture
     user.profilePic = req.file.filename;
     await user.save();
 

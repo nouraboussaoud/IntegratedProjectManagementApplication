@@ -148,22 +148,32 @@ const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const isAdminUpdate = updates.isAdminUpdate;
+    
+    // Remove the admin flag from updates to avoid saving it to the database
+    if (isAdminUpdate) {
+      delete updates.isAdminUpdate;
+    }
     
     const { ObjectId } = require('mongoose').Types;
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid task ID format" });
     }
     
-    const task = await Task.findById(id).populate('assignedTo');
+    const task = await Task.findById(id);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
     
-    if (!task.assignedTo || !req.userId || task.assignedTo._id.toString() !== req.userId) {
+    // Check if user is admin or the assigned user
+    const isAdmin = req.userRole === "admin";
+    
+    // For admin updates, skip the assignment check
+    if (!isAdminUpdate && !isAdmin && (!task.assignedTo || task.assignedTo.toString() !== req.userId)) {
       return res.status(403).json({ 
         message: "Unauthorized: You are not assigned to this task",
         details: {
-          taskAssignedTo: task.assignedTo ? task.assignedTo._id : null,
+          taskAssignedTo: task.assignedTo ? task.assignedTo.toString() : null,
           currentUser: req.userId
         }
       });
@@ -200,22 +210,9 @@ const updateTask = async (req, res) => {
       message: "Task updated successfully", 
       task: updatedTask 
     });
-    
   } catch (error) {
-    console.error('Update task error:', error);
-    
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        message: "Validation error",
-        errors: error.errors 
-      });
-    }
-    
-    res.status(500).json({ 
-      message: "Server error during task update",
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error("Error updating task:", error);
+    res.status(500).json({ message: "Error updating task", error: error.message });
   }
 };
 
@@ -1012,7 +1009,7 @@ const submitQuiz = async (req, res) => {
 
     quiz.questions.forEach((q, i) => {
       const isCorrect = answers[i] === q.correctAnswer;
-      if (isCorrect) score += 10; // 10 points per question
+      if (isCorrect) score += 20; // 10 points per question
       results.push({
         question: q.question,
         studentAnswer: answers[i],
