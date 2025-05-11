@@ -22,9 +22,10 @@ const {
   githubAuth,
   githubCallback,
   getAvailableSkills,   
-    updateUserSkills,
-    getCurrentUserSkills ,
-    getCurrentUser    
+  updateUserSkills,
+  getCurrentUserSkills ,
+
+  getCurrentUser  
  
   
 } = require("../controllers/userController");

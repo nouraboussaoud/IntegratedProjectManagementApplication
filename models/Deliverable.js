@@ -4,15 +4,13 @@ const evaluationSchema = new mongoose.Schema({
   evaluationScore: {
     type: Number,
     min: 0,
-    max: 100
+    max: 100,
   },
   notes: String,
-  
 });
 
 const deliverableSchema = new mongoose.Schema(
   {
-    
     title: {
       type: String,
       required: true,
@@ -27,8 +25,8 @@ const deliverableSchema = new mongoose.Schema(
       required: true,
     },
     file: {
-      url: String,        // Cloudinary URL
-      public_id: String   // Cloudinary public ID
+      url: String, // Cloudinary URL
+      public_id: String, // Cloudinary public ID
     },
     github_commit_url: {
       type: String,
@@ -44,11 +42,17 @@ const deliverableSchema = new mongoose.Schema(
       default: Date.now,
       required: true,
     },
-    evaluation: evaluationSchema // Add evaluation subdocument
-    
+    evaluation: evaluationSchema,
+    cachedText: {
+      type: String, // Stores cleaned text from PDF for plagiarism checks
+      default: null,
+    },
   },
   { timestamps: true }
 );
+
+// Index for faster queries on file.url
+deliverableSchema.index({ 'file.url': 1 });
 
 const Deliverable = mongoose.model('Deliverable', deliverableSchema);
 module.exports = Deliverable;
