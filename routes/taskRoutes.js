@@ -23,6 +23,7 @@ const {
     generateQuiz,
     submitQuiz,
     getQuizAnalytics,
+    getMyQuizAttempts,
 } = require("../controllers/taskController");
 const { verifyToken } = require("../controllers/userController");
 
@@ -46,7 +47,8 @@ router.get("/track-commits/:taskId", verifyToken, trackGitHubCommits);
 router.post('/predict-risk', verifyToken, predictRisk);
 router.get('/myTasks', verifyToken, getMyTasks);
 router.post("/generateQuiz/:taskId", verifyToken, generateQuiz);
-router.post("/submitQuiz/:taskId", verifyToken, submitQuiz);
+router.post("/submitQuiz/:quizId", verifyToken, submitQuiz);
 router.get("/quizAnalytics/:taskId", verifyToken, getQuizAnalytics);
+router.get("/myQuizAttempts/:taskId", verifyToken, getMyQuizAttempts);
 
 module.exports = router;

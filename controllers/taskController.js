@@ -738,6 +738,19 @@ const generateQuiz = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+    
+    // Check if the student has already passed any quiz for this task
+    // Check both the hasPassedQuiz field and the quizzes array
+    if (task.hasPassedQuiz || task.quizzes.some(quiz => 
+      quiz.attempts.some(attempt => 
+        attempt.userId.toString() === req.userId && attempt.passed
+      )
+    )) {
+      return res.status(403).json({ 
+        message: "You have already passed a quiz for this task and cannot generate another.",
+        alreadyPassed: true
+      });
+    }
 
     // Fetch commits from GitHub
     const commits = await fetchAllCommits(
@@ -870,166 +883,8 @@ const generateQuiz = async (req, res) => {
   }
 };
 
-function generateCodeBasedQuestions(codeChanges, commitMessage) {
-  if (!codeChanges || codeChanges.length === 0) {
-    console.log("No code changes to generate questions from");
-    return [];
-  }
-  
-  const questions = [];
-  const seenFiles = new Set(); // Track files for diversity
-  const seenQuestions = new Set(); // Track questions for uniqueness
 
-  // Add a question about the commit purpose
-  const commitQuestion = {
-    question: `What is the purpose of the commit "${commitMessage.substring(0, 30)}${commitMessage.length > 30 ? '...' : ''}"?`,
-    options: [
-      "A: Adding new features",
-      "B: Fixing bugs",
-      "C: Refactoring code",
-      "D: Updating documentation"
-    ],
-    correctAnswer: commitMessage.toLowerCase().includes('fix') ? 
-                  "B: Fixing bugs" : 
-                  "A: Adding new features",
-    explanation: `Based on the commit message "${commitMessage}", this appears to be ${
-      commitMessage.toLowerCase().includes('fix') ? 'fixing a bug' : 'adding new functionality'
-    }.`
-  };
-  questions.push(commitQuestion);
-  seenQuestions.add(`${commitQuestion.question}|commit`);
-
-  // Select up to 4 significant changes from different files
-  const significantChanges = codeChanges
-    .filter(change => 
-      change.code.trim().length > 20 && // Stricter length filter
-      change.file && 
-      (change.file.endsWith('.js') || change.file.endsWith('.jsx') || change.file.endsWith('.css')) &&
-      !seenFiles.has(change.file)
-    )
-    .sort((a, b) => b.code.length - a.code.length) // Prioritize larger changes
-    .slice(0, 4)
-    .map(change => {
-      seenFiles.add(change.file);
-      return change;
-    });
-
-  console.log(`Selected ${significantChanges.length} significant changes from files: ${Array.from(seenFiles)}`);
-
-  // Generate questions for each significant change
-  for (const change of significantChanges) {
-    const fileExt = change.file.split('.').pop().toLowerCase();
-    const codeSnippet = change.code.trim();
-    let question;
-
-    if (fileExt === 'css') {
-      question = {
-        question: `What is the effect of the CSS change in ${change.file}?`,
-        options: [
-          "A: Adjusts layout alignment",
-          "B: Changes font styling",
-          "C: Adds animations",
-          "D: Modifies colors"
-        ],
-        correctAnswer: "A: Adjusts layout alignment",
-        explanation: `The CSS change in ${change.file} modifies layout properties, aligning with the commit "${commitMessage}". Sample: ${codeSnippet.substring(0, 50)}...`
-      };
-    } else if (codeSnippet.includes('<Route') || codeSnippet.includes('react-router-dom')) {
-      question = {
-        question: `What does the routing change in ${change.file} accomplish?`,
-        options: [
-          "A: Adds a new navigation path",
-          "B: Removes an existing route",
-          "C: Modifies route parameters",
-          "D: Changes route rendering logic"
-        ],
-        correctAnswer: "A: Adds a new navigation path",
-        explanation: `The routing change in ${change.file} adds a new path, as indicated by the code: ${codeSnippet.substring(0, 50)}...`
-      };
-    } else if (codeSnippet.includes('import ') && codeSnippet.includes('from "./pages/')) {
-      question = {
-        question: `What is the purpose of the import statement in ${change.file}?`,
-        options: [
-          "A: Imports a new component for rendering",
-          "B: Imports a utility function",
-          "C: Imports a styling module",
-          "D: Imports a configuration file"
-        ],
-        correctAnswer: "A: Imports a new component for rendering",
-        explanation: `The import in ${change.file} brings in a component, likely for rendering, as shown: ${codeSnippet.substring(0, 50)}...`
-      };
-    } else if (codeSnippet.includes('useState') || codeSnippet.includes('useEffect') || codeSnippet.includes('return (')) {
-      question = {
-        question: `What does the React component in ${change.file} do?`,
-        options: [
-          "A: Renders dynamic UI elements",
-          "B: Manages application routing",
-          "C: Handles form submissions",
-          "D: Performs data validation"
-        ],
-        correctAnswer: "A: Renders dynamic UI elements",
-        explanation: `The React component in ${change.file} renders UI elements, as modified in the commit "${commitMessage}". Sample: ${codeSnippet.substring(0, 50)}...`
-      };
-    } else if (codeSnippet.includes('function') || codeSnippet.includes('=>') || codeSnippet.includes('async')) {
-      question = {
-        question: `What does the function in ${change.file} do?`,
-        options: [
-          "A: Processes data and returns a result",
-          "B: Modifies external state or resources",
-          "C: Handles errors or exceptions",
-          "D: Validates input parameters"
-        ],
-        correctAnswer: "A: Processes data and returns a result",
-        explanation: `The function in ${change.file} processes data, as shown: ${codeSnippet.substring(0, 50)}...`
-      };
-    } else {
-      question = {
-        question: `What does the code change in ${change.file} accomplish?`,
-        options: [
-          "A: Implements a new feature",
-          "B: Fixes a bug or issue",
-          "C: Improves code readability",
-          "D: Optimizes performance"
-        ],
-        correctAnswer: commitMessage.toLowerCase().includes('fix') ? 
-                      "B: Fixes a bug or issue" : 
-                      "A: Implements a new feature",
-        explanation: `The code change in ${change.file} aligns with the commit "${commitMessage}". Sample: ${codeSnippet.substring(0, 50)}...`
-      };
-    }
-
-    // Ensure question uniqueness by including file in check
-    const questionKey = `${question.question}|${change.file}`;
-    if (!seenQuestions.has(questionKey)) {
-      questions.push(question);
-      seenQuestions.add(questionKey);
-    }
-  }
-
-  // Ensure exactly 5 questions
-  while (questions.length < 5) {
-    const defaultQuestion = {
-      question: "What is a best practice for writing clean code?",
-      options: [
-        "A: Use short, unclear variable names",
-        "B: Write clear, descriptive variable and function names",
-        "C: Combine multiple functions into one",
-        "D: Avoid comments entirely"
-      ],
-      correctAnswer: "B: Write clear, descriptive variable and function names",
-      explanation: "Descriptive names improve code readability and maintainability."
-    };
-    const questionKey = `${defaultQuestion.question}|default`;
-    if (!seenQuestions.has(questionKey)) {
-      questions.push(defaultQuestion);
-      seenQuestions.add(questionKey);
-    }
-  }
-
-  return questions.slice(0, 5);
-}
-
-function createDefaultQuiz() {
+function createFallbackQuizQuestions() {
   return [
     {
       question: "What is the best practice for code documentation?",
@@ -1102,23 +957,45 @@ function getLanguageFromExtension(ext) {
   return languageMap[ext] || 'unknown';
 }
 
+// taskController.js (partial)
 const submitQuiz = async (req, res) => {
   try {
-    const { taskId, quizId, answers } = req.body;
-    const { ObjectId } = mongoose.Types;
-    if (!ObjectId.isValid(taskId)) {
+    const { taskId, answers } = req.body;
+    const quizId = parseInt(req.params.quizId);
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return res.status(400).json({ message: "Invalid task ID format" });
     }
 
+    // Get task and validate permissions
     const task = await Task.findById(taskId);
-    if (!task || !task.quizzes[quizId]) {
-      return res.status(404).json({ message: "Task or quiz not found" });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
     }
 
+    // Check if the student is assigned to this task
     if (task.assignedTo.toString() !== req.userId) {
       return res.status(403).json({ message: "Unauthorized: Not assigned to this task" });
     }
 
+    // Check if the student has already passed ANY quiz for this task
+    const hasPassedQuiz = task.quizzes.some(quiz => 
+      quiz.attempts.some(attempt => 
+        attempt.userId.toString() === req.userId && attempt.passed
+      )
+    );
+    
+    if (hasPassedQuiz) {
+      return res.status(403).json({ 
+        message: "You have already passed a quiz for this task and cannot attempt another.",
+        alreadyPassed: true,
+        score: 0,
+        results: []
+      });
+    }
+
+    // Check for retry cooldown (if applicable)
     const lastAttempt = task.quizzes[quizId].attempts
       .filter(a => a.userId.toString() === req.userId)
       .sort((a, b) => b.completedAt - a.completedAt)[0];
@@ -1155,7 +1032,11 @@ const submitQuiz = async (req, res) => {
 
     quiz.attempts.push(attempt);
 
+    // When a quiz is passed, mark it in the task document
     if (attempt.passed) {
+      // Update a field in the task to indicate this student has passed a quiz
+      task.hasPassedQuiz = true;
+      
       let progressIncrement = 0;
       if (score >= 80) progressIncrement = 20;
       else if (score >= 60) progressIncrement = 10;
@@ -1163,27 +1044,12 @@ const submitQuiz = async (req, res) => {
       task.progressPercentage = Math.min(100, (task.progressPercentage || 0) + progressIncrement);
     }
 
-    const project = await Project.findById(task.project).populate('group');
-    if (project.group) {
-      const group = await Group.findById(project.group).populate('members');
-      const memberIds = group.members.map(m => m._id.toString());
-      const groupAttempts = quiz.attempts.filter(a => memberIds.includes(a.userId.toString()));
-      if (groupAttempts.length === memberIds.length) {
-        const avgScore = groupAttempts.reduce((sum, a) => sum + a.score, 0) / groupAttempts.length;
-        let groupIncrement = 0;
-        if (avgScore >= 80) groupIncrement = 20;
-        else if (avgScore >= 60) groupIncrement = 10;
-        else groupIncrement = 5;
-        task.progressPercentage = Math.min(100, (task.progressPercentage || 0) + groupIncrement);
-      }
-    }
-
     await task.save();
 
     res.status(200).json({
       message: attempt.passed ? "Quiz passed" : "Quiz failed",
       score,
-      results: attempt.passed ? results : [],
+      results,
       progressPercentage: task.progressPercentage
     });
   } catch (error) {
@@ -1191,36 +1057,40 @@ const submitQuiz = async (req, res) => {
     res.status(500).json({ message: "Error submitting quiz", error: error.message });
   }
 };
-
 const getQuizAnalytics = async (req, res) => {
   try {
-    const { taskId } = req.params;
-    const { ObjectId } = mongoose.Types;
-    if (!ObjectId.isValid(taskId)) {
-      return res.status(400).json({ message: "Invalid task ID format" });
-    }
-
-    const task = await Task.findById(taskId).populate('assignedTo');
+    const taskId = req.params.taskId;
+    
+    const task = await Task.findById(taskId)
+      .populate('assignedTo', 'name username email')
+      .populate({
+        path: 'quizzes.attempts.userId',
+        select: 'name username email'
+      });
+    
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
-    }
-
-    const user = await User.findById(req.userId);
-    if (!user || user.role !== 'tutor') {
-      return res.status(403).json({ message: "Unauthorized: Tutor access required" });
     }
 
     const analytics = task.quizzes.map((quiz, quizId) => ({
       quizId,
       createdAt: quiz.createdAt,
-      attempts: quiz.attempts.map(attempt => ({
-        userId: attempt.userId,
-        username: task.assignedTo?.username || 'Unknown',
-        score: attempt.score,
-        passed: attempt.passed,
-        completedAt: attempt.completedAt,
-        results: attempt.results
-      }))
+      attempts: quiz.attempts.map(attempt => {
+        // Get the user data either from the populated userId or from task.assignedTo
+        const userData = attempt.userId ? 
+          (typeof attempt.userId === 'object' ? attempt.userId : null) : 
+          null;
+        
+        return {
+          userId: attempt.userId,
+          username: userData?.name || task.assignedTo?.name || 'Unknown',
+          email: userData?.email || task.assignedTo?.email || 'Unknown',
+          score: attempt.score,
+          passed: attempt.passed,
+          completedAt: attempt.completedAt,
+          results: attempt.results
+        };
+      })
     }));
 
     res.status(200).json({ message: "Quiz analytics retrieved", analytics });
@@ -1522,43 +1392,6 @@ function truncateCode(code, maxLength = 100) {
   return code.substring(0, maxLength - 3) + '...';
 }
 
-function createDefaultQuiz() {
-  return [
-    {
-      question: "What is the best practice for code documentation?",
-      options: [
-        "A: Document only complex functions",
-        "B: Write comments for every line of code",
-        "C: Use clear function and variable names with comments for complex logic",
-        "D: Rely on code being self-documenting"
-      ],
-      correctAnswer: "C: Use clear function and variable names with comments for complex logic",
-      explanation: "Good documentation balances clear naming with targeted comments for complex sections."
-    },
-    {
-      question: "Which version control practice is recommended for feature development?",
-      options: [
-        "A: Commit directly to the main branch",
-        "B: Create a feature branch and merge via pull request",
-        "C: Create multiple branches for each file changed",
-        "D: Avoid committing until the feature is completely finished"
-      ],
-      correctAnswer: "B: Create a feature branch and merge via pull request",
-      explanation: "Feature branches keep the main branch stable while allowing code review before merging."
-    },
-    {
-      question: "What is the purpose of unit testing?",
-      options: [
-        "A: To slow down development and add bureaucracy",
-        "B: To verify individual components work as expected in isolation",
-        "C: To replace manual testing completely",
-        "D: To test the entire application at once"
-      ],
-      correctAnswer: "B: To verify individual components work as expected in isolation",
-      explanation: "Unit tests ensure components work correctly on their own, making it easier to identify issues."
-    }
-  ];
-}
 
 function generateCodeBasedQuestions(codeChanges, commitMessage) {
   if (!codeChanges || codeChanges.length === 0) {
@@ -1785,6 +1618,42 @@ function generateCommitMessageQuestions(commitMessage) {
   return questions;
 }
 
+const getMyQuizAttempts = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const userId = req.userId; // From verifyToken middleware
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid task ID format" });
+    }
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    // Extract only the attempts made by the current user
+    const attempts = task.quizzes.flatMap(quiz => 
+      quiz.attempts
+        .filter(attempt => attempt.userId.toString() === userId)
+        .map(attempt => ({
+          quizId: quiz._id,
+          createdAt: quiz.createdAt,
+          score: attempt.score,
+          passed: attempt.passed,
+          completedAt: attempt.completedAt,
+          results: attempt.results
+        }))
+    ).sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    res.status(200).json({ message: "Quiz attempts retrieved", attempts });
+  } catch (error) {
+    console.error("Error fetching quiz attempts:", error);
+    res.status(500).json({ message: "Error fetching quiz attempts", error: error.message });
+  }
+};
+
 module.exports = {
   getAllTasks,
   getTaskById,
@@ -1810,4 +1679,5 @@ module.exports = {
   generateQuiz,
   submitQuiz,
   getQuizAnalytics,
+  getMyQuizAttempts,
 };

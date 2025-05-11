@@ -24,7 +24,6 @@ const {
   getAvailableSkills,   
     updateUserSkills,
     getCurrentUserSkills ,
-    
  
   
 } = require("../controllers/userController");
