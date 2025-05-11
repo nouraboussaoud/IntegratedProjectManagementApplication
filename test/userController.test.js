@@ -5,7 +5,7 @@ const mockSendMail = jest.fn().mockResolvedValue(true);
 nodemailer.createTransport.mockReturnValue({ sendMail: mockSendMail });
 
 // Mock the emailTemplates module to avoid "Cannot find module" error
-jest.mock("../utils/emailTemplates", () => ({
+jest.mock("../Utils/emailTemplates", () => ({
   getVerificationEmailTemplate: jest.fn().mockReturnValue("<p>Mock Verification Email</p>"),
   getPasswordResetTemplate: jest.fn().mockReturnValue("<p>Mock Password Reset Email</p>"),
   getAccountStatusTemplate: jest.fn().mockReturnValue("<p>Mock Account Status Email</p>"),
