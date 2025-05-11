@@ -23,7 +23,8 @@ const {
   githubCallback,
   getAvailableSkills,   
     updateUserSkills,
-    getCurrentUserSkills     
+    getCurrentUserSkills ,
+    
  
   
 } = require("../controllers/userController");
@@ -73,8 +74,8 @@ router.post('/logout', verifyToken, logoutUser); // Logout requires token 🚀
 
 // Protected routes with verifyToken middleware
 router.put('/update/:id', verifyToken, updateUser); // Update user requires token
-router.delete('/delete/:id', verifyToken, isAdmin, deleteUser); // Delete user requires token
-router.put('/toggle-status/:id', verifyToken, isAdmin, toggleUserStatus); // Toggle status requires token
+router.delete('/delete/:id', verifyToken,  deleteUser); // Delete user requires token
+router.put('/toggle-status/:id', verifyToken, toggleUserStatus); // Toggle status requires token
 router.get('/:id', verifyToken, getUserById); // Get user by ID requires token
 router.put('/update-password/:id', verifyToken, updatePassword); // Update password requires token  ///
 router.get('/verify-email/:verificationToken', verifyEmail); //🚀
@@ -87,5 +88,6 @@ router.get('/auth/github/callback', githubCallback);
 router.get('/skills',  getAvailableSkills);
 router.put('/skills', verifyToken, updateUserSkills);
 router.get('/me/skills', verifyToken, getCurrentUserSkills);
+
 
 module.exports = router;

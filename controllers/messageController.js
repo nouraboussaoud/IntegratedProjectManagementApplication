@@ -120,11 +120,18 @@ const sendMessage = async (req, res) => {
       return res.status(404).json({ message: "Sender not found" });
     }
 
+    // Log roles for debugging
+    console.log("Sender role:", sender.role);
+    console.log("Receiver role:", receiver.role);
+
     // Check if receiver is banned
     if (receiver.isBanned) {
       return res.status(403).json({ message: "Cannot send message to banned user" });
     }
 
+    // Remove any role-based restrictions that might be causing the issue
+    // Allow any user to message any other user regardless of role
+    
     // Create and save the message
     const message = new Message({
       sender: senderId,
@@ -142,8 +149,8 @@ const sendMessage = async (req, res) => {
 
     // Populate sender and receiver info for the socket event
     const populatedMessage = await Message.findById(message._id)
-      .populate('sender', 'name email profilePic')
-      .populate('receiver', 'name email profilePic');
+      .populate('sender', 'name email profilePic role')
+      .populate('receiver', 'name email profilePic role');
 
     // Get the io instance
     const io = req.app.get('io');
@@ -394,11 +401,16 @@ const userTyping = (io, socket, data) => {
 };
 
 // Get online users
+// Get online users
 const getOnlineUsers = async (req, res) => {
   try {
     const io = req.app.get('io');
+    // Using newer approach to validate ObjectIds
     const onlineUsers = Object.keys(io.sockets.adapter.rooms)
-      .filter(room => mongoose.Types.ObjectId.isValid(room));
+      .filter(room => {
+        // Check if the string matches ObjectId pattern
+        return /^[0-9a-fA-F]{24}$/.test(room);
+      });
     
     res.json({ onlineUsers });
   } catch (error) {

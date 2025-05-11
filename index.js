@@ -23,7 +23,23 @@ const passport = require('passport');
 require("./middleware/passport")();
 const path = require("path");
 require("./passport"); 
+
+
 dotenv.config(); // Load environment variables
+// Initialize Cloudinary
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Verify Cloudinary configuration at startup
+console.log('Cloudinary configuration status:', {
+  cloudName: !!process.env.CLOUDINARY_CLOUD_NAME,
+  apiKey: !!process.env.CLOUDINARY_API_KEY,
+  apiSecret: !!process.env.CLOUDINARY_API_SECRET
+});
 
 require("./middleware/passport")(); // Ensure passport is initialized
 const attendanceRoutes = require("./routes/attendanceRoutes");
@@ -44,11 +60,9 @@ app.use(session({
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected..."))
-  .catch((err) => console.error(err));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const summaryRoute = require('./routes/summary');
+app.use('/api/summary', summaryRoute);
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "your_secret_key",
@@ -70,6 +84,15 @@ app.use("/api/progress", progressRoutes); // Add progress tracking routes
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/attendance", attendanceRoutes);
+//app.use("/api/aiDetection", aiDetectionRoutes); // Updated mount point to match frontend expectation
+//app.use("/api/plagiarism", aiDetectionRoutes); // Add plagiarism route mounting
+
+// Add AI routes
+const aiRoutes = require('./routes/aiRoutes');
+
+// Register AI Routes
+app.use('/api/ai', aiRoutes);
+
 // Prediction API endpoint
 app.post('/predict', async (req, res) => {
   try {

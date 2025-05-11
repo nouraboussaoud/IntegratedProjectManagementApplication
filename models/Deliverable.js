@@ -12,6 +12,7 @@ const evaluationSchema = new mongoose.Schema({
 
 const deliverableSchema = new mongoose.Schema(
   {
+    
     title: {
       type: String,
       required: true,
@@ -26,8 +27,8 @@ const deliverableSchema = new mongoose.Schema(
       required: true,
     },
     file: {
-      type: String,
-      required: true,
+      url: String,        // Cloudinary URL
+      public_id: String   // Cloudinary public ID
     },
     github_commit_url: {
       type: String,
@@ -44,6 +45,7 @@ const deliverableSchema = new mongoose.Schema(
       required: true,
     },
     evaluation: evaluationSchema // Add evaluation subdocument
+    
   },
   { timestamps: true }
 );
