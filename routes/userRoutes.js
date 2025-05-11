@@ -24,7 +24,6 @@ const {
   getAvailableSkills,   
     updateUserSkills,
     getCurrentUserSkills ,
-    getCurrentUser    
  
   
 } = require("../controllers/userController");
@@ -88,6 +87,5 @@ router.get('/auth/github/callback', githubCallback);
 router.get('/skills',  getAvailableSkills);
 router.put('/skills', verifyToken, updateUserSkills);
 router.get('/me/skills', verifyToken, getCurrentUserSkills);
-router.get("/me", verifyToken, getCurrentUser);
 
 module.exports = router;
