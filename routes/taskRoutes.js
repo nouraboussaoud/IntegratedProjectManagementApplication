@@ -20,29 +20,33 @@ const {
     trackGitHubCommits,
     predictRisk,
     getMyTasks,
+    generateQuiz,
+    submitQuiz,
+    getQuizAnalytics,
 } = require("../controllers/taskController");
 const { verifyToken } = require("../controllers/userController");
 
-router.get("/getAllTasks",verifyToken , getAllTasks);
-router.get("/getTaskById/:id",verifyToken , getTaskById);
-router.get("/getTaskByName/:name",verifyToken , getTaskByName);
-router.get("/getTaskByProject/:id",verifyToken , getTaskByProject);
-router.get("/getTaskByUser/:id",verifyToken , getTaskByUser);
-router.get("/getTaskByPriority/:priority",verifyToken , getTaskByPriority);
-router.post("/createTask",verifyToken , createTask);
-router.put("/updateTask/:id",verifyToken , updateTask);
-router.delete("/deleteTask/:id",verifyToken , deleteTask);
-router.put("/setTaskPending/:id",verifyToken , setTaskPending);
-router.put("/setTaskInProgress/:id",verifyToken , setTaskInProgress);
-router.put("/setTaskCompleted/:id",verifyToken , setTaskCompleted);
-router.put("/assignTask/:id",verifyToken , assignTask);
-router.get("/sortTasksByPriority",verifyToken , sortTasksByPriority);
-router.put("/updateTaskProgress/:id",verifyToken , updateTaskProgress); // Uncomment if needed
-router.get("/getTaskWithProgress",verifyToken , getTaskWithProgress); // Uncomment if needed
-// ✅ Route to fetch GitHub commits and update task progress
+router.get("/getAllTasks", verifyToken, getAllTasks);
+router.get("/getTaskById/:id", verifyToken, getTaskById);
+router.get("/getTaskByName/:name", verifyToken, getTaskByName);
+router.get("/getTaskByProject/:id", verifyToken, getTaskByProject);
+router.get("/getTaskByUser/:id", verifyToken, getTaskByUser);
+router.get("/getTaskByPriority/:priority", verifyToken, getTaskByPriority);
+router.post("/createTask", verifyToken, createTask);
+router.put("/updateTask/:id", verifyToken, updateTask);
+router.delete("/deleteTask/:id", verifyToken, deleteTask);
+router.put("/setTaskPending/:id", verifyToken, setTaskPending);
+router.put("/setTaskInProgress/:id", verifyToken, setTaskInProgress);
+router.put("/setTaskCompleted/:id", verifyToken, setTaskCompleted);
+router.put("/assignTask/:id", verifyToken, assignTask);
+router.get("/sortTasksByPriority", verifyToken, sortTasksByPriority);
+router.put("/updateTaskProgress/:id", verifyToken, updateTaskProgress);
+router.get("/getTaskWithProgress", verifyToken, getTaskWithProgress);
 router.get("/track-commits/:taskId", verifyToken, trackGitHubCommits);
-// Route to handle task risk prediction
-router.post('/predict-risk', predictRisk);
-router.get('/myTasks', verifyToken, getMyTasks);module.exports = router;
+router.post('/predict-risk', verifyToken, predictRisk);
+router.get('/myTasks', verifyToken, getMyTasks);
+router.post("/generateQuiz/:taskId", verifyToken, generateQuiz);
+router.post("/submitQuiz/:taskId", verifyToken, submitQuiz);
+router.get("/quizAnalytics/:taskId", verifyToken, getQuizAnalytics);
 
-
+module.exports = router;
