@@ -10,7 +10,7 @@ const {
   getVerificationEmailTemplate, 
   getPasswordResetTemplate, 
   getAccountStatusTemplate 
-} = require("../utils/emailTemplates");
+} = require("../Utils/emailTemplates");
 
 const mongoose = require("mongoose");
 const secretKey = process.env.JWT_SECRET_KEY || "mysecretkey";
