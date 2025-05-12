@@ -88,5 +88,6 @@ router.put('/skills', verifyToken, updateUserSkills);
 router.get('/me/skills', verifyToken, getCurrentUserSkills);
 
 router.put('/update-profile-picture/:id', verifyToken, upload.single('profilePic'), updateProfilePicture);
+router.put('/update-profile-picture/:id', verifyToken, upload.single('profilePic'), updateProfilePicture);
 
 module.exports = router;

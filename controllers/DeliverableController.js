@@ -188,33 +188,33 @@ const getRepositories = async (req, res) => {
 
 // Submit Evaluation
 const submitEvaluation = async (req, res) => {
-    try {
-      const { deliverableId } = req.params;
-      const { score,  notes } = req.body;
-  
-      const deliverable = await Deliverable.findById(deliverableId);
-      if (!deliverable) {
-        return res.status(404).json({ message: "Deliverable not found" });
-      }
-  
-      // Update evaluation data
-      deliverable.evaluation = {
-        score,
-        notes,
-      };
-      deliverable.status = 'evaluated';
-  
-      await deliverable.save();
-  
-      res.status(200).json({ 
-        message: "Evaluation submitted successfully",
-        deliverable 
-      });
-    } catch (error) {
-      console.error("Error submitting evaluation:", error);
-      res.status(500).json({ message: "Error submitting evaluation" });
+  try {
+    const { deliverableId } = req.params;
+    const { evaluationScore, notes } = req.body; // Changed 'score' to 'evaluationScore'
+
+    const deliverable = await Deliverable.findById(deliverableId);
+    if (!deliverable) {
+      return res.status(404).json({ message: "Deliverable not found" });
     }
-  };
+
+    // Update evaluation data
+    deliverable.evaluation = {
+      evaluationScore, // Use evaluationScore to match the schema
+      notes,
+    };
+    deliverable.status = 'evaluated';
+
+    await deliverable.save();
+
+    res.status(200).json({ 
+      message: "Evaluation submitted successfully",
+      deliverable 
+    });
+  } catch (error) {
+    console.error("Error submitting evaluation:", error);
+    res.status(500).json({ message: "Error submitting evaluation" });
+  }
+};
   
   // Get Evaluation
   const getEvaluation = async (req, res) => {
@@ -235,6 +235,54 @@ const submitEvaluation = async (req, res) => {
     }
   };
 
+   /**
+ * Fetch all deliverables from the database with optional filtering/sorting.
+ * @param {Object} req - Express request object (can include query params for filtering)
+ * @param {Object} res - Express response object
+ */
+const getAllDeliverables = async (req, res) => {
+  try {
+    // Extract query parameters (for filtering/sorting)
+    const { 
+      status, 
+      student_id, 
+      sortBy = 'submission_date', 
+      sortOrder = 'desc' 
+    } = req.query;
+
+    // Build the query
+    const query = {};
+    if (status) query.status = status;
+    if (student_id) query.student_id = student_id;
+
+    // Fetch deliverables with sorting
+    const deliverables = await Deliverable.find(query)
+      .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+      .populate('student_id', 'name email'); // Populate student details (optional)
+
+    if (!deliverables || deliverables.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: "No deliverables found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: deliverables.length,
+      data: deliverables,
+    });
+
+  } catch (error) {
+    console.error("Error fetching deliverables:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch deliverables",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 module.exports = {
   createDeliverable,
   getDeliverablesHistory,
@@ -243,5 +291,6 @@ module.exports = {
   getRepositories,
   submitEvaluation,
   getEvaluation,
-  getFile
+  getFile,
+  getAllDeliverables
 };
