@@ -4,6 +4,11 @@ const Project = require("../models/Project");
 const Task = require("../models/Task");
 const mongoose = require('mongoose');
 const fetch = require('node-fetch');
+const esprima = require('esprima');
+const fs = require('fs').promises;
+const path = require('path');
+const os = require('os');
+const { generateQuestionsWithOllama } = require('../services/ollamaService');
 
 // Existing functions (unchanged, included for completeness)
 const getAllTasks = async (req, res) => {
@@ -463,11 +468,9 @@ const trackGitHubCommits = async (req, res) => {
       return res.status(500).json({ message: "GitHub token not configured" });
     }
 
-    // Fetch all commits
     const commitsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/commits?sha=${branchName}`;
     const commits = await fetchAllCommits(commitsUrl, githubToken);
 
-    // Process commits to include only required fields
     const formattedCommits = commits.map(commit => ({
       message: commit.commit.message,
       author: commit.commit.author.name,
@@ -476,11 +479,9 @@ const trackGitHubCommits = async (req, res) => {
       url: commit.html_url
     }));
 
-    // Fetch all merged pull requests
     const pullsUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/pulls?state=closed&base=${branchName}`;
     const pullRequests = await fetchAllPullRequests(pullsUrl, githubToken);
 
-    // Filter for merged PRs and format the response
     const formattedPullRequests = pullRequests
       .filter(pr => pr.merged_at)
       .map(pr => ({
@@ -505,9 +506,6 @@ const trackGitHubCommits = async (req, res) => {
   }
 };
 
-
-//////////////// hugging face predection 
-
 const predictTaskRisk = async (taskDetails) => {
   if (!taskDetails) return null;
   
@@ -517,16 +515,12 @@ const predictTaskRisk = async (taskDetails) => {
     return null;
   }
 
-  // Configuration
   const MAX_RETRIES = 3;
-  const INITIAL_BACKOFF = 1000; // 1 second
+  const INITIAL_BACKOFF = 1000;
   let currentBackoff = INITIAL_BACKOFF;
   
-  // Use T5 model with IA3 fine-tuning for classification
-  // This is a smaller, more efficient model that should be more responsive
   const MODEL_URL = "https://api-inference.huggingface.co/models/google/t5-small";
   
-  // Retry loop
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       console.log(`Attempt ${attempt} of ${MAX_RETRIES}`);
@@ -542,15 +536,13 @@ const predictTaskRisk = async (taskDetails) => {
         }),
       });
       
-      // Handle rate limiting
       if (response.status === 429) {
         console.log(`Rate limit exceeded (429). Backing off for ${currentBackoff}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, currentBackoff));
-        currentBackoff *= 2; // Exponential backoff
+        currentBackoff *= 2;
         continue;
       }
       
-      // Handle other error status codes
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
@@ -558,22 +550,20 @@ const predictTaskRisk = async (taskDetails) => {
       const result = await response.json();
       console.log('Hugging Face response:', result);
       
-      // Process the text generation result
       if (result && typeof result === 'string') {
         const generatedText = result.toLowerCase().trim();
         const isHighRisk = generatedText.includes("high risk");
         
-        // Calculate confidence based on the clarity of the response
-        let confidence = 0.75; // Default confidence
+        let confidence = 0.75;
         
         if (generatedText === "high risk") {
-          confidence = 0.95; // Very clear high risk
+          confidence = 0.95;
         } else if (generatedText === "low risk") {
-          confidence = 0.95; // Very clear low risk
+          confidence = 0.95;
         } else if (generatedText.includes("high") && generatedText.includes("risk")) {
-          confidence = 0.85; // Contains high risk but with other text
+          confidence = 0.85;
         } else if (generatedText.includes("low") && generatedText.includes("risk")) {
-          confidence = 0.85; // Contains low risk but with other text
+          confidence = 0.85;
         }
         
         return {
@@ -582,7 +572,6 @@ const predictTaskRisk = async (taskDetails) => {
         };
       }
       
-      // Fallback to keyword-based assessment if model response is unexpected
       return keywordBasedRiskAssessment(taskDetails);
       
     } catch (error) {
@@ -591,7 +580,7 @@ const predictTaskRisk = async (taskDetails) => {
       if (attempt < MAX_RETRIES) {
         console.log(`Backing off for ${currentBackoff}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, currentBackoff));
-        currentBackoff *= 2; // Exponential backoff
+        currentBackoff *= 2;
       } else {
         console.error('Max retries reached. Falling back to keyword analysis.');
         return keywordBasedRiskAssessment(taskDetails);
@@ -602,9 +591,7 @@ const predictTaskRisk = async (taskDetails) => {
   return keywordBasedRiskAssessment(taskDetails);
 };
 
-// Helper function for keyword-based risk assessment as fallback
 const keywordBasedRiskAssessment = (taskDetails) => {
-  // Enhanced keyword-based risk assessment with weighted categories
   const riskFactors = {
     highRisk: {
       keywords: [
@@ -640,7 +627,6 @@ const keywordBasedRiskAssessment = (taskDetails) => {
   const taskDetailsLower = taskDetails.toLowerCase();
   const totalWords = taskDetailsLower.split(/\s+/).length;
   
-  // Calculate weighted score for each risk factor
   let totalRiskScore = 0;
   let totalWeight = 0;
   
@@ -648,7 +634,6 @@ const keywordBasedRiskAssessment = (taskDetails) => {
     let categoryScore = 0;
     
     keywords.forEach(keyword => {
-      // Count occurrences of each keyword
       const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
       const matches = taskDetailsLower.match(regex);
       if (matches) {
@@ -656,20 +641,16 @@ const keywordBasedRiskAssessment = (taskDetails) => {
       }
     });
     
-    // Normalize by text length and apply weight
     const normalizedCategoryScore = (categoryScore / Math.max(1, totalWords)) * weight;
     totalRiskScore += normalizedCategoryScore;
     totalWeight += weight;
   });
   
-  // Calculate final risk score (0-1 scale)
   const finalScore = Math.min(1, (totalRiskScore / totalWeight) * 10);
   
-  // Dynamic threshold based on text length
   const threshold = Math.max(0.15, Math.min(0.3, 0.15 + (totalWords / 1000)));
   const isHighRisk = finalScore > threshold;
   
-  // Calculate confidence (higher for extreme values, lower for borderline)
   const distanceFromThreshold = Math.abs(finalScore - threshold);
   const confidence = Math.min(0.99, Math.max(0.5, 0.5 + distanceFromThreshold * 2));
   
@@ -680,7 +661,6 @@ const keywordBasedRiskAssessment = (taskDetails) => {
     confidence: confidence
   };
 };
-
 
 const predictRisk = async (req, res) => {
   const { taskId, taskDetails } = req.body;
@@ -731,6 +711,7 @@ const predictRisk = async (req, res) => {
     return res.status(500).json({ message: "Error predicting risk", error: error.message });
   }
 };
+
 const getMyTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ assignedTo: req.userId }).populate('project');
@@ -738,6 +719,938 @@ const getMyTasks = async (req, res) => {
   } catch (error) {
     console.error("Error fetching assigned tasks:", error);
     res.status(500).json({ message: "Error fetching your assigned tasks", error: error.message });
+  }
+};
+
+// New quiz-related functions
+const generateQuiz = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { commitShas } = req.body;
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid task ID format" });
+    }
+
+    // Get task and validate permissions
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    
+    // Check if the student has already passed any quiz for this task
+    // Check both the hasPassedQuiz field and the quizzes array
+    if (task.hasPassedQuiz || task.quizzes.some(quiz => 
+      quiz.attempts.some(attempt => 
+        attempt.userId.toString() === req.userId && attempt.passed
+      )
+    )) {
+      return res.status(403).json({ 
+        message: "You have already passed a quiz for this task and cannot generate another.",
+        alreadyPassed: true
+      });
+    }
+
+    // Fetch commits from GitHub
+    const commits = await fetchAllCommits(
+      `https://api.github.com/repos/${task.repoOwner}/${task.repoName}/commits?sha=${task.branchName}`, 
+      process.env.GITHUB_TOKEN
+    );
+    
+    const selectedCommits = commitShas 
+      ? commits.filter(c => commitShas.includes(c.sha))
+      : commits.slice(0, 5);
+
+    if (selectedCommits.length === 0) {
+      return res.status(404).json({ message: "No commits found" });
+    }
+
+    // Fetch the actual code diffs for each commit
+    for (let commit of selectedCommits) {
+      try {
+        const diffUrl = `https://api.github.com/repos/${task.repoOwner}/${task.repoName}/commits/${commit.sha}`;
+        const diffResponse = await fetch(diffUrl, {
+          headers: { 
+            'Accept': 'application/vnd.github.v3.diff',
+            'Authorization': `token ${process.env.GITHUB_TOKEN}`
+          }
+        });
+        
+        if (!diffResponse.ok) {
+          console.error(`Failed to fetch diff: ${diffResponse.status} ${diffResponse.statusText}`);
+          commit.diff = "";
+          continue;
+        }
+        
+        const diffText = await diffResponse.text();
+        commit.diff = diffText || "";
+        
+        console.log(`Fetched diff for commit ${commit.sha}, length: ${commit.diff.length} characters`);
+      } catch (error) {
+        console.error(`Error fetching diff for commit ${commit.sha}:`, error);
+        commit.diff = "";
+      }
+    }
+
+    // Check if we have any valid diffs
+    const validCommits = selectedCommits.filter(c => c.diff && typeof c.diff === 'string' && c.diff.length > 0);
+    if (validCommits.length === 0) {
+      console.log("No valid diffs found, using default questions");
+      const questions = createDefaultQuiz();
+      const quiz = { questions, commitSha: selectedCommits[0].sha, createdAt: new Date() };
+      task.quizzes = task.quizzes || [];
+      task.quizzes.push(quiz);
+      await task.save();
+      return res.status(200).json({ message: "Quiz generated", quizId: task.quizzes.length - 1, questions });
+    }
+
+    // Parse the code changes from the diff
+    const codeChanges = parseCodeDiff(validCommits[0].diff || '');
+    console.log(`Parsed ${codeChanges.length} code changes from diff`);
+
+    // Filter for source code files
+    const sourceCodeChanges = codeChanges.filter(change => 
+      change.file && 
+      (change.file.endsWith('.js') || change.file.endsWith('.jsx') || change.file.endsWith('.css'))
+    );
+    console.log(`Found ${sourceCodeChanges.length} source code changes`);
+
+    // Generate questions
+    let questions = [];
+
+    // Try Ollama with ollamacode model
+    if (sourceCodeChanges.length > 0) {
+      try {
+        console.log("Attempting to generate questions with Ollama (ollamacode)");
+        questions = await generateQuestionsWithOllama(
+          sourceCodeChanges,
+          validCommits[0].commit.message,
+          task.taskDetails
+        );
+        
+        if (questions && questions.length >= 5) {
+          console.log(`Successfully generated ${questions.length} questions with Ollama (ollamacode)`);
+        } else {
+          console.log(`Ollama returned ${questions?.length || 0} questions, falling back to local generation`);
+          throw new Error("Ollama returned insufficient questions");
+        }
+      } catch (ollamaError) {
+        console.error("Ollama (ollamacode) question generation failed:", ollamaError.message);
+        console.log("Falling back to local code-based question generation");
+        questions = generateCodeBasedQuestions(sourceCodeChanges, validCommits[0].commit.message);
+        
+        if (!questions || questions.length < 5) {
+          console.log(`Local generation produced ${questions?.length || 0} questions, supplementing with defaults`);
+          questions = [...questions, ...createDefaultQuiz()].slice(0, 5);
+        }
+      }
+    } else {
+      console.log("No source code changes found, using default questions");
+      questions = createDefaultQuiz();
+    }
+
+    // Ensure questions have the correct format
+    const validatedQuestions = questions.map(q => ({
+      question: q.question || "What is the purpose of this code change?",
+      options: Array.isArray(q.options) && q.options.length === 4 ? 
+        q.options : 
+        ["A: Option 1", "B: Option 2", "C: Option 3", "D: Option 4"],
+      correctAnswer: q.correctAnswer || q.options?.[0] || "A: Option 1",
+      explanation: q.explanation || "This change aligns with the commit's purpose."
+    }));
+    
+    // Save the validated questions
+    const quiz = {
+      questions: validatedQuestions,
+      commitSha: validCommits[0].sha,
+      createdAt: new Date()
+    };
+    
+    task.quizzes = task.quizzes || [];
+    task.quizzes.push(quiz);
+    await task.save();
+
+    res.status(200).json({
+      message: "Quiz generated",
+      quizId: task.quizzes.length - 1,
+      questions: validatedQuestions
+    });
+    
+  } catch (error) {
+    console.error('Error generating quiz:', error);
+    res.status(500).json({ message: 'Failed to generate quiz', error: error.message });
+  }
+};
+
+
+function createFallbackQuizQuestions() {
+  return [
+    {
+      question: "What is the best practice for code documentation?",
+      options: [
+        "A: Document only complex functions",
+        "B: Write comments for every line of code",
+        "C: Use clear names with comments for complex logic",
+        "D: Rely on code being self-documenting"
+      ],
+      correctAnswer: "C: Use clear names with comments for complex logic",
+      explanation: "Good documentation balances clear naming with targeted comments."
+    },
+    {
+      question: "Which version control practice is recommended?",
+      options: [
+        "A: Commit directly to the main branch",
+        "B: Create feature branches and use pull requests",
+        "C: Create branches for each file",
+        "D: Commit only when the feature is complete"
+      ],
+      correctAnswer: "B: Create feature branches and use pull requests",
+      explanation: "Feature branches keep the main branch stable and allow code review."
+    },
+    {
+      question: "What is the purpose of unit testing?",
+      options: [
+        "A: To slow down development",
+        "B: To verify individual components work correctly",
+        "C: To replace manual testing",
+        "D: To test the entire application"
+      ],
+      correctAnswer: "B: To verify individual components work correctly",
+      explanation: "Unit tests catch issues early by testing components in isolation."
+    },
+    {
+      question: "What is a key principle of clean code?",
+      options: [
+        "A: Minimize comments",
+        "B: Create multi-purpose functions",
+        "C: Use descriptive names for variables and functions",
+        "D: Maximize function length"
+      ],
+      correctAnswer: "C: Use descriptive names for variables and functions",
+      explanation: "Descriptive names make code easier to understand."
+    },
+    {
+      question: "What is a benefit of version control?",
+      options: [
+        "A: Makes code run faster",
+        "B: Tracks changes over time",
+        "C: Increases code complexity",
+        "D: Reduces code readability"
+      ],
+      correctAnswer: "B: Tracks changes over time",
+      explanation: "Version control systems track changes and enable collaboration."
+    }
+  ];
+}
+
+function getLanguageFromExtension(ext) {
+  const languageMap = {
+    'js': 'JavaScript',
+    'jsx': 'JavaScript/React',
+    'ts': 'TypeScript',
+    'tsx': 'TypeScript/React',
+    'py': 'Python',
+    'css': 'CSS',
+    'html': 'HTML'
+  };
+  return languageMap[ext] || 'unknown';
+}
+
+// taskController.js (partial)
+const submitQuiz = async (req, res) => {
+  try {
+    const { taskId, answers } = req.body;
+    const quizId = parseInt(req.params.quizId);
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid task ID format" });
+    }
+
+    // Get task and validate permissions
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    // Check if the student is assigned to this task
+    if (task.assignedTo.toString() !== req.userId) {
+      return res.status(403).json({ message: "Unauthorized: Not assigned to this task" });
+    }
+
+    // Check if the student has already passed ANY quiz for this task
+    const hasPassedQuiz = task.quizzes.some(quiz => 
+      quiz.attempts.some(attempt => 
+        attempt.userId.toString() === req.userId && attempt.passed
+      )
+    );
+    
+    if (hasPassedQuiz) {
+      return res.status(403).json({ 
+        message: "You have already passed a quiz for this task and cannot attempt another.",
+        alreadyPassed: true,
+        score: 0,
+        results: []
+      });
+    }
+
+    // Check for retry cooldown (if applicable)
+    const lastAttempt = task.quizzes[quizId].attempts
+      .filter(a => a.userId.toString() === req.userId)
+      .sort((a, b) => b.completedAt - a.completedAt)[0];
+    if (lastAttempt) {
+      const cooldown = 60 * 60 * 1000; // 1 hour
+      if (new Date() - new Date(lastAttempt.completedAt) < cooldown) {
+        return res.status(429).json({ message: "Retry cooldown: Please wait before retaking the quiz" });
+      }
+    }
+
+    const quiz = task.quizzes[quizId];
+    let score = 0;
+    const results = [];
+
+    quiz.questions.forEach((q, i) => {
+      const isCorrect = answers[i] === q.correctAnswer;
+      if (isCorrect) score += 10; // 10 points per question
+      results.push({
+        question: q.question,
+        studentAnswer: answers[i],
+        correctAnswer: q.correctAnswer,
+        isCorrect,
+        explanation: q.explanation
+      });
+    });
+
+    const attempt = {
+      userId: req.userId,
+      score,
+      results,
+      completedAt: new Date(),
+      passed: score >= 70
+    };
+
+    quiz.attempts.push(attempt);
+
+    // When a quiz is passed, mark it in the task document
+    if (attempt.passed) {
+      // Update a field in the task to indicate this student has passed a quiz
+      task.hasPassedQuiz = true;
+      
+      let progressIncrement = 0;
+      if (score >= 80) progressIncrement = 20;
+      else if (score >= 60) progressIncrement = 10;
+      else progressIncrement = 5;
+      task.progressPercentage = Math.min(100, (task.progressPercentage || 0) + progressIncrement);
+    }
+
+    await task.save();
+
+    res.status(200).json({
+      message: attempt.passed ? "Quiz passed" : "Quiz failed",
+      score,
+      results,
+      progressPercentage: task.progressPercentage
+    });
+  } catch (error) {
+    console.error("Error submitting quiz:", error);
+    res.status(500).json({ message: "Error submitting quiz", error: error.message });
+  }
+};
+const getQuizAnalytics = async (req, res) => {
+  try {
+    const taskId = req.params.taskId;
+    
+    const task = await Task.findById(taskId)
+      .populate('assignedTo', 'name username email')
+      .populate({
+        path: 'quizzes.attempts.userId',
+        select: 'name username email'
+      });
+    
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const analytics = task.quizzes.map((quiz, quizId) => ({
+      quizId,
+      createdAt: quiz.createdAt,
+      attempts: quiz.attempts.map(attempt => {
+        // Get the user data either from the populated userId or from task.assignedTo
+        const userData = attempt.userId ? 
+          (typeof attempt.userId === 'object' ? attempt.userId : null) : 
+          null;
+        
+        return {
+          userId: attempt.userId,
+          username: userData?.name || task.assignedTo?.name || 'Unknown',
+          email: userData?.email || task.assignedTo?.email || 'Unknown',
+          score: attempt.score,
+          passed: attempt.passed,
+          completedAt: attempt.completedAt,
+          results: attempt.results
+        };
+      })
+    }));
+
+    res.status(200).json({ message: "Quiz analytics retrieved", analytics });
+  } catch (error) {
+    console.error("Error fetching quiz analytics:", error);
+    res.status(500).json({ message: "Error fetching quiz analytics", error: error.message });
+  }
+};
+
+// New function to generate questions locally
+async function generateQuestionsLocally(diff, commitMessage, taskDetails) {
+  try {
+    // Parse the diff to extract code changes
+    const codeChanges = parseCodeDiff(diff);
+    if (!codeChanges.length) {
+      return generateFallbackQuestions(taskDetails);
+    }
+
+    // Generate questions based on code changes
+    const questions = [];
+    
+    for (const change of codeChanges.slice(0, 3)) { // Limit to 3 questions
+      const questionData = generateQuestionFromCode(change.code, commitMessage);
+      if (questionData) {
+        questions.push(questionData);
+      }
+    }
+    
+    // If we couldn't generate enough questions, add some fallback ones
+    if (questions.length < 3) {
+      const fallbackQuestions = generateFallbackQuestions(taskDetails);
+      questions.push(...fallbackQuestions.slice(0, 3 - questions.length));
+    }
+    
+    return questions;
+  } catch (error) {
+    console.error("Error generating questions locally:", error);
+    return generateFallbackQuestions(taskDetails);
+  }
+}
+
+/**
+ * Improved function to parse GitHub diff format
+ * @param {string} diff - The raw diff text from GitHub API
+ * @returns {Array} - Array of parsed code changes
+ */
+function parseCodeDiff(diff) {
+  const parsedChanges = [];
+  try {
+    // Check if diff is a string
+    if (typeof diff !== 'string') {
+      console.error('Invalid diff format:', typeof diff);
+      return [];
+    }
+    
+    // Log a sample of the diff for debugging
+    console.log('Diff sample:', diff.substring(0, 200));
+    
+    // Split the diff into lines
+    const lines = diff.split("\n");
+    let currentFile = "";
+    let inHunk = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Track the current file being modified
+      if (line.startsWith('diff --git')) {
+        currentFile = line.split(' ')[2].substring(2); // Extract filename
+        console.log('Found file in diff:', currentFile);
+        continue;
+      }
+      
+      // Alternative file header format
+      if (line.startsWith('--- a/') || line.startsWith('+++ b/')) {
+        const filePath = line.substring(6);
+        if (filePath && filePath !== '/dev/null') {
+          currentFile = filePath;
+          console.log('Found file in diff (alt format):', currentFile);
+        }
+        continue;
+      }
+      
+      // Track when we're in a code hunk
+      if (line.startsWith('@@')) {
+        inHunk = true;
+        console.log('Found hunk:', line);
+        continue;
+      }
+      
+      // Only process lines when we're in a code hunk
+      if (inHunk) {
+        // Extract added lines (actual code changes)
+        if (line.startsWith("+") && !line.startsWith("+++")) {
+          const code = line.substring(1).trim();
+          if (code && code.length > 0) { // Accept any non-empty line
+            parsedChanges.push({ 
+              type: "added", 
+              code,
+              file: currentFile
+            });
+          }
+        }
+        // Extract removed lines
+        else if (line.startsWith("-") && !line.startsWith("---")) {
+          const code = line.substring(1).trim();
+          if (code && code.length > 0) {
+            parsedChanges.push({ 
+              type: "removed", 
+              code,
+              file: currentFile
+            });
+          }
+        }
+      }
+    }
+    
+    console.log(`Parsed ${parsedChanges.length} code changes from diff`);
+    
+    // If we found changes, log a sample
+    if (parsedChanges.length > 0) {
+      console.log('Sample change:', JSON.stringify(parsedChanges[0]));
+    }
+    
+    return parsedChanges;
+  } catch (error) {
+    console.error("Error parsing diff:", error);
+    return [];
+  }
+}
+
+function generateQuestionFromCode(code, commitMessage) {
+  try {
+    // Determine the language of the code
+    const language = detectLanguage(code);
+    
+    // Generate question based on the code and language
+    if (language === 'javascript' || language === 'typescript') {
+      return generateJavaScriptQuestion(code, commitMessage);
+    } else if (language === 'python') {
+      return generatePythonQuestion(code, commitMessage);
+    } else {
+      return generateGenericQuestion(code, commitMessage);
+    }
+  } catch (error) {
+    console.error("Error generating question from code:", error);
+    return null;
+  }
+}
+
+function detectLanguage(code) {
+  // Simple language detection based on syntax
+  if (code.includes('function') || code.includes('const') || code.includes('let') || 
+      code.includes('var') || code.includes('=>')) {
+    return 'javascript';
+  } else if (code.includes('def ') || code.includes('import ') || code.includes('class ') && 
+             code.includes(':')) {
+    return 'python';
+  } else {
+    return 'generic';
+  }
+}
+
+function generateJavaScriptQuestion(code, commitMessage) {
+  try {
+    // Try to parse the code with esprima to understand its structure
+    let ast;
+    try {
+      ast = esprima.parseScript(code);
+    } catch (e) {
+      // If parsing fails, fall back to generic question
+      return generateGenericQuestion(code, commitMessage);
+    }
+    
+    // Generate different types of questions based on the code structure
+    if (code.includes('function') || code.includes('=>')) {
+      return {
+        question: `What is the purpose of the function in this code: "${truncateCode(code)}"?`,
+        options: [
+          "To process data and return a result",
+          "To modify the DOM or UI",
+          "To handle an event or user interaction",
+          "To make an API call or fetch data"
+        ],
+        answer: "To process data and return a result", // Default answer, would need more sophisticated analysis
+        explanation: `This function appears in a commit with message: "${commitMessage}". Understanding function purpose is key to maintaining code.`
+      };
+    } else if (code.includes('if') || code.includes('else')) {
+      return {
+        question: `What condition is being checked in this code: "${truncateCode(code)}"?`,
+        options: [
+          "Checking if a value exists or is truthy",
+          "Comparing two values for equality",
+          "Validating user input or data",
+          "Handling an error condition"
+        ],
+        answer: "Checking if a value exists or is truthy", // Default answer
+        explanation: `This conditional logic appears in a commit with message: "${commitMessage}". Understanding conditions is essential for code flow.`
+      };
+    } else {
+      return generateGenericQuestion(code, commitMessage);
+    }
+  } catch (error) {
+    console.error("Error generating JavaScript question:", error);
+    return generateGenericQuestion(code, commitMessage);
+  }
+}
+
+function generatePythonQuestion(code, commitMessage) {
+  // Similar to JavaScript but for Python syntax
+  if (code.includes('def ')) {
+    return {
+      question: `What does this Python function do: "${truncateCode(code)}"?`,
+      options: [
+        "Process data and return a result",
+        "Interact with external systems",
+        "Handle exceptions or errors",
+        "Perform data validation"
+      ],
+      answer: "Process data and return a result", // Default answer
+      explanation: `This Python function appears in a commit with message: "${commitMessage}". Understanding function behavior is crucial.`
+    };
+  } else if (code.includes('class ')) {
+    return {
+      question: `What is the purpose of this Python class: "${truncateCode(code)}"?`,
+      options: [
+        "To encapsulate related data and methods",
+        "To implement an interface or abstract class",
+        "To extend functionality of another class",
+        "To create a singleton pattern"
+      ],
+      answer: "To encapsulate related data and methods", // Default answer
+      explanation: `This class definition appears in a commit with message: "${commitMessage}". Classes help organize code.`
+    };
+  } else {
+    return generateGenericQuestion(code, commitMessage);
+  }
+}
+
+function generateGenericQuestion(code, commitMessage) {
+  // Fallback for when we can't generate specific questions
+  return {
+    question: `What does this code do: "${truncateCode(code)}"?`,
+    options: [
+      "Implements a new feature",
+      "Fixes a bug or issue",
+      "Refactors existing code",
+      "Adds documentation or comments"
+    ],
+    answer: commitMessage.toLowerCase().includes('fix') ? 
+            "Fixes a bug or issue" : 
+            "Implements a new feature", // Simple heuristic based on commit message
+    explanation: `This code appears in a commit with message: "${commitMessage}". Understanding code changes is essential for maintenance.`
+  };
+}
+
+function generateFallbackQuestions(taskDetails) {
+  // Generate generic questions when we can't extract meaningful questions from code
+  return [
+    {
+      question: "What is the best practice for code documentation?",
+      options: [
+        "Document only complex functions",
+        "Write comments for every line of code",
+        "Use clear function and variable names with comments for complex logic",
+        "Rely on code being self-documenting"
+      ],
+      answer: "Use clear function and variable names with comments for complex logic",
+      explanation: "Good documentation balances clear naming with targeted comments for complex sections."
+    },
+    {
+      question: "Which version control practice is recommended for feature development?",
+      options: [
+        "Commit directly to the main branch",
+        "Create a feature branch and merge via pull request",
+        "Create multiple branches for each file changed",
+        "Avoid committing until the feature is completely finished"
+      ],
+      answer: "Create a feature branch and merge via pull request",
+      explanation: "Feature branches keep the main branch stable while allowing code review before merging."
+    },
+    {
+      question: "What is the purpose of unit testing?",
+      options: [
+        "To slow down development and add bureaucracy",
+        "To verify individual components work as expected in isolation",
+        "To replace manual testing completely",
+        "To test the entire application at once"
+      ],
+      answer: "To verify individual components work as expected in isolation",
+      explanation: "Unit tests ensure components work correctly on their own, making it easier to identify issues."
+    }
+  ];
+}
+
+function truncateCode(code, maxLength = 100) {
+  // Truncate code for display in questions
+  if (code.length <= maxLength) return code;
+  return code.substring(0, maxLength - 3) + '...';
+}
+
+
+function generateCodeBasedQuestions(codeChanges, commitMessage) {
+  if (!codeChanges || codeChanges.length === 0) {
+    console.log("No code changes to generate questions from");
+    return [];
+  }
+  
+  const questions = [];
+  
+  // First question is always about the commit purpose
+  questions.push({
+    question: `What is the purpose of the commit "${commitMessage.substring(0, 30)}${commitMessage.length > 30 ? '...' : ''}"?`,
+    options: [
+      "A: Adding new features",
+      "B: Fixing bugs",
+      "C: Refactoring code",
+      "D: Updating documentation"
+    ],
+    correctAnswer: commitMessage.toLowerCase().includes('fix') ? 
+                  "B: Fixing bugs" : 
+                  "A: Adding new features",
+    explanation: `Based on the commit message "${commitMessage}", this appears to be ${
+      commitMessage.toLowerCase().includes('fix') ? 'fixing a bug' : 'adding new functionality'
+    }.`
+  });
+  
+  // Process up to 2 more significant code changes
+  const significantChanges = codeChanges
+    .filter(change => change.code.trim().length > 10)
+    .slice(0, 2);
+  
+  for (const change of significantChanges) {
+    const fileExt = change.file ? change.file.split('.').pop().toLowerCase() : '';
+    const language = getLanguageFromExtension(fileExt);
+    
+    // Generate a question based on the type of code
+    if (change.code.includes('function') || change.code.includes('def ') || 
+        change.code.includes('=>') || change.code.includes('method')) {
+      questions.push({
+        question: `What is the likely purpose of this ${language} function?`,
+        options: [
+          "A: Process data and return a result",
+          "B: Modify external state or resources",
+          "C: Handle errors or exceptions",
+          "D: Validate input parameters"
+        ],
+        correctAnswer: "A: Process data and return a result",
+        explanation: `This function appears in ${change.file || 'the codebase'} and was modified in this commit.`
+      });
+    } else if (change.code.includes('class') || change.code.includes('interface')) {
+      questions.push({
+        question: `What is the purpose of this ${language} class?`,
+        options: [
+          "A: Encapsulate related data and behavior",
+          "B: Implement an interface or protocol",
+          "C: Extend functionality of a parent class",
+          "D: Create a singleton instance"
+        ],
+        correctAnswer: "A: Encapsulate related data and behavior",
+        explanation: `This class definition appears in ${change.file || 'the codebase'} and was modified in this commit.`
+      });
+    } else if (change.code.includes('if') || change.code.includes('else') || 
+               change.code.includes('switch') || change.code.includes('case')) {
+      questions.push({
+        question: `What is this conditional logic likely checking for?`,
+        options: [
+          "A: Validating input data",
+          "B: Handling an error condition",
+          "C: Implementing business logic",
+          "D: Optimizing performance"
+        ],
+        correctAnswer: "C: Implementing business logic",
+        explanation: `This conditional logic appears in ${change.file || 'the codebase'} and was modified in this commit.`
+      });
+    } else if (change.code.includes('fetch') || change.code.includes('axios') || 
+               change.code.includes('http') || change.code.includes('request')) {
+      questions.push({
+        question: `What is this code likely doing?`,
+        options: [
+          "A: Making an API request",
+          "B: Processing local data",
+          "C: Updating the user interface",
+          "D: Configuring application settings"
+        ],
+        correctAnswer: "A: Making an API request",
+        explanation: `This code appears to be making a network request and was modified in this commit.`
+      });
+    } else {
+      // Generic code question
+      questions.push({
+        question: `What does this code change likely accomplish?`,
+        options: [
+          "A: Implements a new feature",
+          "B: Fixes a bug or issue",
+          "C: Refactors existing code",
+          "D: Improves performance"
+        ],
+        correctAnswer: commitMessage.toLowerCase().includes('fix') ? 
+                      "B: Fixes a bug or issue" : 
+                      "A: Implements a new feature",
+        explanation: `This code change was part of the commit "${commitMessage}" and affects ${change.file || 'the codebase'}.`
+      });
+    }
+  }
+  
+  // If we couldn't generate enough questions, add a generic one
+  if (questions.length < 3) {
+    questions.push({
+      question: "What is a best practice when making code changes?",
+      options: [
+        "A: Make large commits with many changes",
+        "B: Make small, focused commits with clear messages",
+        "C: Only commit when the entire feature is complete",
+        "D: Avoid writing tests until the code is stable"
+      ],
+      correctAnswer: "B: Make small, focused commits with clear messages",
+      explanation: "Small, focused commits are easier to review, understand, and revert if necessary."
+    });
+  }
+  
+  return questions;
+}
+
+/**
+ * Generate questions based on commit message when no code changes are available
+ * @param {string} commitMessage - The commit message
+ * @returns {Array} - Array of questions
+ */
+function generateCommitMessageQuestions(commitMessage) {
+  console.log('Generating questions based on commit message:', commitMessage);
+  
+  const questions = [];
+  
+  // First question about the commit purpose
+  questions.push({
+    question: `What is the purpose of the commit "${commitMessage.substring(0, 30)}${commitMessage.length > 30 ? '...' : ''}"?`,
+    options: [
+      "A: Adding new features",
+      "B: Fixing bugs",
+      "C: Refactoring code",
+      "D: Updating documentation"
+    ],
+    correctAnswer: commitMessage.toLowerCase().includes('fix') ? 
+                  "B: Fixing bugs" : 
+                  "A: Adding new features",
+    explanation: `Based on the commit message "${commitMessage}", this appears to be ${
+      commitMessage.toLowerCase().includes('fix') ? 'fixing a bug' : 'adding new functionality'
+    }.`
+  });
+  
+  // Extract keywords from commit message
+  const keywords = commitMessage.toLowerCase().split(/\s+/).filter(word => 
+    word.length > 3 && !['the', 'and', 'for', 'with'].includes(word)
+  );
+  
+  // Second question based on keywords in commit message
+  if (keywords.length > 0) {
+    // Check for specific types of changes based on keywords
+    if (keywords.some(word => ['profile', 'picture', 'image', 'photo', 'avatar'].includes(word))) {
+      questions.push({
+        question: "What is a best practice for handling profile pictures in web applications?",
+        options: [
+          "A: Store images directly in the database as BLOBs",
+          "B: Store images on the filesystem and references in the database",
+          "C: Always use third-party image hosting services",
+          "D: Avoid allowing users to upload custom images"
+        ],
+        correctAnswer: "B: Store images on the filesystem and references in the database",
+        explanation: "Storing images on the filesystem with database references provides a good balance of performance and flexibility."
+      });
+    } else if (keywords.some(word => ['api', 'endpoint', 'request', 'response', 'fetch'].includes(word))) {
+      questions.push({
+        question: "What is a key consideration when designing API endpoints?",
+        options: [
+          "A: Making endpoints as generic as possible",
+          "B: Using only GET requests for simplicity",
+          "C: Following REST principles and using appropriate HTTP methods",
+          "D: Returning all available data in every response"
+        ],
+        correctAnswer: "C: Following REST principles and using appropriate HTTP methods",
+        explanation: "RESTful APIs use appropriate HTTP methods (GET, POST, PUT, DELETE) and follow consistent resource-oriented design."
+      });
+    } else if (keywords.some(word => ['ui', 'interface', 'design', 'layout', 'component'].includes(word))) {
+      questions.push({
+        question: "What is an important principle in UI design?",
+        options: [
+          "A: Using as many colors as possible to attract attention",
+          "B: Consistency in design patterns and user interactions",
+          "C: Maximizing the number of features visible at once",
+          "D: Avoiding user testing until the final stages"
+        ],
+        correctAnswer: "B: Consistency in design patterns and user interactions",
+        explanation: "Consistent design patterns help users learn the interface quickly and predict how to interact with new features."
+      });
+    } else {
+      // Generic software development question
+      questions.push({
+        question: "What is a key principle of good software development?",
+        options: [
+          "A: Writing code quickly without planning",
+          "B: Avoiding documentation to save time",
+          "C: Writing maintainable, well-tested code",
+          "D: Implementing all possible features at once"
+        ],
+        correctAnswer: "C: Writing maintainable, well-tested code",
+        explanation: "Maintainable, well-tested code reduces bugs and makes future development easier and faster."
+      });
+    }
+  }
+  
+  // Third question - general software development best practice
+  questions.push({
+    question: "What is a best practice when making code changes?",
+    options: [
+      "A: Make large commits with many changes",
+      "B: Make small, focused commits with clear messages",
+      "C: Only commit when the entire feature is complete",
+      "D: Avoid writing tests until the code is stable"
+    ],
+    correctAnswer: "B: Make small, focused commits with clear messages",
+    explanation: "Small, focused commits are easier to review, understand, and revert if necessary."
+  });
+  
+  return questions;
+}
+
+const getMyQuizAttempts = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const userId = req.userId; // From verifyToken middleware
+
+    // Validate taskId
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
+      return res.status(400).json({ message: "Invalid task ID format" });
+    }
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    // Extract only the attempts made by the current user
+    const attempts = task.quizzes.flatMap(quiz => 
+      quiz.attempts
+        .filter(attempt => attempt.userId.toString() === userId)
+        .map(attempt => ({
+          quizId: quiz._id,
+          createdAt: quiz.createdAt,
+          score: attempt.score,
+          passed: attempt.passed,
+          completedAt: attempt.completedAt,
+          results: attempt.results
+        }))
+    ).sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    res.status(200).json({ message: "Quiz attempts retrieved", attempts });
+  } catch (error) {
+    console.error("Error fetching quiz attempts:", error);
+    res.status(500).json({ message: "Error fetching quiz attempts", error: error.message });
   }
 };
 
@@ -763,4 +1676,8 @@ module.exports = {
   predictTaskRisk,
   predictRisk,
   getMyTasks,
+  generateQuiz,
+  submitQuiz,
+  getQuizAnalytics,
+  getMyQuizAttempts,
 };

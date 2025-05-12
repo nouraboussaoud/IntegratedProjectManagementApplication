@@ -8,7 +8,8 @@ const {
   getRepositories ,
   submitEvaluation,
   getEvaluation,
-  getFile 
+  getFile, 
+  getDeliverablesByUser
 } = require("../controllers/DeliverableController");
 const { authenticateToken } = require("../middleware/verifyTokenMiddleware");
 

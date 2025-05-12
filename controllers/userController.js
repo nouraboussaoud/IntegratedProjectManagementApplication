@@ -6,6 +6,11 @@ const crypto = require("crypto");
 const passport = require("passport");
 const path = require("path");
 const fs = require("fs");
+const { 
+  getVerificationEmailTemplate, 
+  getPasswordResetTemplate, 
+  getAccountStatusTemplate 
+} = require("../Utils/emailTemplates");
 
 const mongoose = require("mongoose");
 const secretKey = process.env.JWT_SECRET_KEY || "mysecretkey";
@@ -59,7 +64,7 @@ const registerUser = async (req, res) => {
       from: "aboussaoudnour436@gmail.com",
       to: user.email,
       subject: "Verify your email address",
-      text: `Please click on this link to verify your email address: http://localhost:5000/api/users/verify-email/${user.verificationToken}`,
+      html: getVerificationEmailTemplate(user.name, user.verificationToken),
     };
 
     await transporter.sendMail(mailOptions);
@@ -345,7 +350,7 @@ const forgotPassword = async (req, res) => {
       from: "aboussaoudnour436@gmail.com",
       to: email,
       subject: "Your New Password",
-      text: `Dear user, after your request to recover the password, your new one will be: ${newPassword}`,
+      html: getPasswordResetTemplate(user.name, newPassword),
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -389,11 +394,12 @@ const toggleBanStatus = async (req, res) => {
 
     await user.save();
 
+    // Send an email notification
     const mailOptions = {
       from: "aboussaoudnour436@gmail.com",
       to: user.email,
       subject: `Your account has been ${action === "ban" ? "banned" : "unbanned"}`,
-      text: `Your account has been ${action === "ban" ? "banned. For more information, please contact us." : "unbanned."}`,
+      html: getAccountStatusTemplate(user.name, action === "ban"),
     };
 
     await transporter.sendMail(mailOptions);
