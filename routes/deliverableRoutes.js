@@ -9,7 +9,7 @@ const {
   submitEvaluation,
   getEvaluation,
   getFile, 
-  getDeliverablesByUser
+  getAllDeliverables
 } = require("../controllers/DeliverableController");
 const { authenticateToken } = require("../middleware/verifyTokenMiddleware");
 
@@ -44,6 +44,7 @@ router.post('/:deliverableId/evaluate', authenticateToken, submitEvaluation);
 router.get('/:deliverableId/evaluation', authenticateToken, getEvaluation);
 
 router.get('/:deliverableId/file', authenticateToken, getFile);
+router.get('/getAllDeliverables', getAllDeliverables);
 
 
 
