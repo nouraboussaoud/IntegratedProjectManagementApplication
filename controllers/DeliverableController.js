@@ -188,33 +188,33 @@ const getRepositories = async (req, res) => {
 
 // Submit Evaluation
 const submitEvaluation = async (req, res) => {
-    try {
-      const { deliverableId } = req.params;
-      const { score,  notes } = req.body;
-  
-      const deliverable = await Deliverable.findById(deliverableId);
-      if (!deliverable) {
-        return res.status(404).json({ message: "Deliverable not found" });
-      }
-  
-      // Update evaluation data
-      deliverable.evaluation = {
-        score,
-        notes,
-      };
-      deliverable.status = 'evaluated';
-  
-      await deliverable.save();
-  
-      res.status(200).json({ 
-        message: "Evaluation submitted successfully",
-        deliverable 
-      });
-    } catch (error) {
-      console.error("Error submitting evaluation:", error);
-      res.status(500).json({ message: "Error submitting evaluation" });
+  try {
+    const { deliverableId } = req.params;
+    const { evaluationScore, notes } = req.body; // Changed 'score' to 'evaluationScore'
+
+    const deliverable = await Deliverable.findById(deliverableId);
+    if (!deliverable) {
+      return res.status(404).json({ message: "Deliverable not found" });
     }
-  };
+
+    // Update evaluation data
+    deliverable.evaluation = {
+      evaluationScore, // Use evaluationScore to match the schema
+      notes,
+    };
+    deliverable.status = 'evaluated';
+
+    await deliverable.save();
+
+    res.status(200).json({ 
+      message: "Evaluation submitted successfully",
+      deliverable 
+    });
+  } catch (error) {
+    console.error("Error submitting evaluation:", error);
+    res.status(500).json({ message: "Error submitting evaluation" });
+  }
+};
   
   // Get Evaluation
   const getEvaluation = async (req, res) => {
