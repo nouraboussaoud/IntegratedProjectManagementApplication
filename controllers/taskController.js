@@ -794,7 +794,7 @@ const generateQuiz = async (req, res) => {
     const validCommits = selectedCommits.filter(c => c.diff && typeof c.diff === 'string' && c.diff.length > 0);
     if (validCommits.length === 0) {
       console.log("No valid diffs found, using default questions");
-      const questions = createDefaultQuiz();
+      const questions = createFallbackQuizQuestions();
       const quiz = { questions, commitSha: selectedCommits[0].sha, createdAt: new Date() };
       task.quizzes = task.quizzes || [];
       task.quizzes.push(quiz);
@@ -839,12 +839,12 @@ const generateQuiz = async (req, res) => {
         
         if (!questions || questions.length < 5) {
           console.log(`Local generation produced ${questions?.length || 0} questions, supplementing with defaults`);
-          questions = [...questions, ...createDefaultQuiz()].slice(0, 5);
+          questions = [...questions, ...createFallbackQuizQuestions()].slice(0, 5);
         }
       }
     } else {
       console.log("No source code changes found, using default questions");
-      questions = createDefaultQuiz();
+      questions = createFallbackQuizQuestions();
     }
 
     // Ensure questions have the correct format
