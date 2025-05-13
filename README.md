@@ -46,28 +46,6 @@ GitHub Actions: CI/CD.
 SonarCloud: Code quality.
 Jenkins: Continuous integration.
 
-# 📁 Directory Structure
-FlowPi/
-├── client/                   # React frontend
-│   ├── public/               # Static assets
-│   ├── src/                  # Source files
-│   │   ├── components/       # Reusable UI elements
-│   │   ├── context/          # React context
-│   │   ├── pages/            # App pages
-│   │   ├── styles/           # CSS
-│   │   └── App.js            # App entry point
-├── server/                   # Node/Express backend
-│   ├── config/               # Config files
-│   ├── controllers/          # Route handlers
-│   ├── models/               # DB schemas
-│   ├── routes/               # API endpoints
-│   └── server.js             # Backend entry
-├── docker-compose.yml        # Docker config
-├── .env.example              # Env template
-├── .gitignore                # Git ignores
-├── README.md                 # Project docs
-└── package.json              # Dependencies
-
 ## 🛠️ Getting Started
 ✅ Prerequisites
 
