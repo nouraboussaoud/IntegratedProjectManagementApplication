@@ -1,36 +1,135 @@
-# FlowPi -  Student Project Management Platform
+# 🚀 FlowPi - AI-Driven Student Project Management Platform
+🧠 Overview
+FlowPi is an intelligent, full-stack project management platform developed as part of the Software Engineering coursework at Esprit School of Engineering. 
+Designed for academic institutions, FlowPi leverages:
 
-## 📌 Overview
-FlowPi is an intelligent project management platform designed for academic institutions. It integrates AI-driven automation, collaboration, and evaluation features to enhance the student learning experience. The platform simplifies project oversight by providing automated progress tracking, smart team formation, and AI-assisted grading.
+🤖 AI-powered automation
+🧑‍🤝‍🧑 Real-time collaboration tools
+♿ Accessibility features
 
-## 🚀 Features
-### 1️⃣ User Authentication & Management
-- Secure registration and login for Students, Tutors, and Admins.
-- Role-based access control (RBAC) to define user permissions.
+The goal: enhance student learning and simplify project oversight for educators.
+🛠️ Built with modern technologies: React.js, Node.js, and MongoDB
+✨ Features
 
-### 2️⃣ Project Management
-- Tutors can create, manage, and assign project topics.
-- AI-powered project recommendations based on student skills and motivation.
-- Admins can monitor project progress through interactive dashboards.
+AI-Powered Project Matching: Recommends projects based on student skills and interests.
+Automated Team Formation: Forms optimal teams using compatibility analysis.
+Live Progress Tracking: Interactive dashboards using WebSockets.
+Git Integration: Analyzes contributions via Git logs.
+AI-Driven Evaluation: Uses NLP for code quality assessment & feedback.
+Accessibility First: Screen reader support & audio notifications.
+Smart Quiz Generator: Creates quizzes from codebases.
 
-### 3️⃣ Group Assignment & Collaboration
-- Automated and manual team formation based on skills, availability, and interests.
-- Integrated collaboration tools (discussion boards, shared resources).
+# ⚙️ Tech Stack
+🔹 Frontend
 
-### 4️⃣ Team Collaboration & Communication
-- Built-in messaging system for students and tutors.
-- Automated deadline notifications and project updates.
+React.js: Component-based UI.
+CSS3: Custom styling.
+Axios: API communication.
+React Router: Navigation.
+Lucide React: Accessible icons.
+React Toastify: Notifications.
 
-### 5️⃣ Deliverables & Evaluation
-- **Git Log Analysis**: Tracks student contributions and engagement levels.
-- **AI-Driven Report Evaluation**: Uses NLP models for quality assessment and personalized feedback.
-- **Plagiarism Detection**: Ensures academic integrity.
-- **Tutor Validation**: Allows human intervention in AI-generated grades.
+🔹 Backend
 
-### 6️⃣ Personalized Learning & Recommendations
-- AI-driven recommendations for project collaboration.
-- Smart quiz generation from codebase for knowledge validation.
+Node.js: Runtime environment.
+Express.js: API routing.
+MongoDB: NoSQL database.
+JWT: Authentication.
+Ollama: Local AI integration.
+TensorFlow.js: Machine learning models.
+bcrypt: Password hashing.
 
-### 7️⃣ Progress Tracking & Reporting
-- Real-time project tracking dashboards.
-- Performance analytics and reports (exportable in PDF/Excel).
+🔹 DevOps & Tools
+
+Docker: Containerization.
+GitHub Actions: CI/CD.
+SonarCloud: Code quality.
+Jenkins: Continuous integration.
+
+## 🛠️ Getting Started
+✅ Prerequisites
+
+Node.js (v22+)
+MongoDB (local/cloud)
+Docker (optional)
+Git
+
+📦 Installation
+# Clone the repository
+git clone https://github.com/nouraboussaoud/IntegratedProjectManagementApplication.git
+cd FlowPi
+
+# Backend setup
+cd server
+npm install
+
+# Frontend setup
+cd ../client
+npm install
+
+⚙️ Environment Variables
+Copy .env.example to .env in both server/ and client/ folders:
+# server/.env
+MONGO_URI=mongodb://localhost:27017/flowpi
+JWT_SECRET=your_jwt_secret
+PORT=5000
+
+# client/.env
+REACT_APP_API_URL=http://localhost:5000/api
+
+Ensure MongoDB is running locally or via MongoDB Atlas.
+▶️ Run Locally
+Start Development Servers
+# Start backend
+cd server
+npm run dev
+
+# Start frontend
+cd ../client
+npm start
+
+🐳 Docker Deployment
+# Make sure Docker is installed
+cd FlowPi
+docker-compose up --build
+
+Access:
+
+Frontend: http://localhost:3000
+API: http://localhost:5000/api
+
+To stop containers:
+docker-compose down
+
+# 🔖 GitHub Topics
+
+react
+node-js
+mongodb
+artificial-intelligence
+web-development
+project-management
+esprit-school
+
+# 🙏 Acknowledgments
+This project was developed under the guidance of the Software Engineering faculty at Esprit School of Engineering. 
+Special thanks to:
+
+Professors and mentors
+Fellow classmates and reviewers
+
+# 🤝 Contributing
+Contributions are welcome!
+Steps to contribute:
+
+Fork the repo
+git checkout -b feature/your-feature
+git commit -m "Add your feature"
+git push origin feature/your-feature
+Open a Pull Request
+
+📬 Contact
+
+📧 Email: flowpi@esprit.tn
+🐛 Issues: Open one on GitHub
+
